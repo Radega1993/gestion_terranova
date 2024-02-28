@@ -1,13 +1,9 @@
-# Configuración de la conexión a la base de datos
+# En connection.py
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.database.models import Base
+from .models import Base  # Asegúrate de que el path sea correcto
 
-# Conexión a SQLite
 engine = create_engine('sqlite:///geston_terranova.db', echo=True)
-
-# Crear todas las tablas definidas en Base
-Base.metadata.create_all(engine)
-
-# Crear una fábrica de sesiones vinculada al motor
 Session = sessionmaker(bind=engine)
+
+Base.metadata.create_all(engine)
