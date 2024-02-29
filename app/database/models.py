@@ -1,11 +1,12 @@
 # Modelos de la base de datos (tablas, relaciones)
 
-from sqlalchemy import create_engine, Column, Integer, String, Float, ForeignKey, Date
+from sqlalchemy import Boolean, Column, Integer, String, Float, ForeignKey, Date
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from werkzeug.security import generate_password_hash
 
 Base = declarative_base()
+
 
 class Producto(Base):
     __tablename__ = 'productos'
@@ -13,6 +14,7 @@ class Producto(Base):
     nombre = Column(String, nullable=False)
     precio = Column(Float, nullable=False)
     stock_actual = Column(Integer, nullable=False)
+    activo = Column(Boolean, default=True) 
 
 class Venta(Base):
     __tablename__ = 'ventas'

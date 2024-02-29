@@ -1,65 +1,124 @@
 import tkinter as tk
 from tkinter import messagebox, ttk, simpledialog
 from app.database.connection import Session
+from app.gui.widgets.product_dialog import abrir_dialogo_producto
 from app.logic.stock import actualizar_stock, obtener_stock_actual  # Asegúrate de que el import es correcto
 from app.database.models import Producto
 
 class ProductManagementWidget(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
+        self.configure(bg='#f0f0f0')  # Fondo claro para el frame
+
+        self.style = ttk.Style()
+        self.style.configure("Treeview", font=('Helvetica', 12), rowheight=25)
+        self.style.configure("Treeview.Heading", font=('Helvetica', 13, 'bold'))
+
         self.create_widgets()
         self.listar_productos()
 
     def create_widgets(self):
-        # Lista de productos
-        self.lista_productos = ttk.Treeview(self, columns=("ID", "Nombre", "Precio", "Stock"), show="headings")
-        for col in self.lista_productos['columns']:
-            self.lista_productos.heading(col, text=col)
+        # Frame para los botones
+        self.frame_botones = tk.Frame(self, bg='#f0f0f0')
+        self.frame_botones.pack(fill=tk.X, padx=10, pady=5)
+
+        # Botones con iconos (asumiendo que tienes los iconos disponibles)
+        # self.icono_recargar = tk.PhotoImage(file='recargar.png')
+        self.btn_recargar = ttk.Button(self.frame_botones, text="Recargar Lista", command=self.listar_productos)  # , image=self.icono_recargar
+        self.btn_recargar.pack(side=tk.LEFT, padx=5, pady=5)
+
+        # self.icono_añadir = tk.PhotoImage(file='añadir.png')
+        self.btn_añadir_producto = ttk.Button(self.frame_botones, text="Añadir Producto", command=self.añadir_producto)  # , image=self.icono_añadir
+        self.btn_añadir_producto.pack(side=tk.LEFT, padx=5, pady=5)
+
+        # self.icono_actualizar = tk.PhotoImage(file='actualizar.png')
+        self.btn_actualizar_stock = ttk.Button(self.frame_botones, text="Actualizar Stock", command=self.actualizar_stock_producto)  # , image=self.icono_actualizar
+        self.btn_actualizar_stock.pack(side=tk.LEFT, padx=5, pady=5)
+
+        # self.icono_eliminar = tk.PhotoImage(file='eliminar.png')
+        self.btn_eliminar_producto = ttk.Button(self.frame_botones, text="Eliminar Producto", command=self.eliminar_producto)  # , image=self.icono_eliminar
+        self.btn_eliminar_producto.pack(side=tk.LEFT, padx=5, pady=5)
+
+        # Lista de productos con scrollbar
+        self.frame_lista = tk.Frame(self)
+        self.frame_lista.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
+
+        self.scrollbar = ttk.Scrollbar(self.frame_lista)
+        self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        self.lista_productos = ttk.Treeview(self.frame_lista, columns=("ID", "Nombre", "Precio", "Stock"), show="headings", yscrollcommand=self.scrollbar.set)
         self.lista_productos.pack(fill=tk.BOTH, expand=True)
 
-        # Botón para recargar la lista de productos
-        self.btn_recargar = tk.Button(self, text="Recargar Lista", command=self.listar_productos)
-        self.btn_recargar.pack(side=tk.TOP, fill=tk.X)
+        self.scrollbar.config(command=self.lista_productos.yview)
 
-        # Botón para añadir producto
-        self.btn_añadir_producto = tk.Button(self, text="Añadir Producto", command=self.añadir_producto)
-        self.btn_añadir_producto.pack(side=tk.TOP, fill=tk.X)
-
-        # Botón para actualizar stock
-        self.btn_actualizar_stock = tk.Button(self, text="Actualizar Stock", command=self.actualizar_stock_producto)
-        self.btn_actualizar_stock.pack(side=tk.TOP, fill=tk.X)
+        # Configuración de las columnas
+        for col in self.lista_productos['columns']:
+            self.lista_productos.heading(col, text=col)
+            self.lista_productos.column(col, width=120, anchor=tk.CENTER)
 
     def listar_productos(self):
-        for i in self.lista_productos.get_children():
-            self.lista_productos.delete(i)
+        self.lista_productos.delete(*self.lista_productos.get_children())
         with Session() as session:
-            productos = session.query(Producto).all()
+            productos = session.query(Producto).filter_by(activo=True).all()
             for producto in productos:
-                self.lista_productos.insert("", tk.END, values=(producto.id, producto.nombre, producto.precio, producto.stock_actual))
+                self.lista_productos.insert('', 'end', values=(producto.id, producto.nombre, producto.precio, producto.stock_actual))
+
 
     def añadir_producto(self):
-        # Crear una ventana simple para añadir un nuevo producto
-        nombre = simpledialog.askstring("Nombre del Producto", "Introduce el nombre del producto:")
-        precio = simpledialog.askfloat("Precio del Producto", "Introduce el precio del producto:")
-        stock = simpledialog.askinteger("Stock del Producto", "Introduce el stock inicial del producto:")
-        if nombre and precio and stock is not None:
+        nombre, precio, stock = abrir_dialogo_producto(self)
+        if nombre:
             with Session() as session:
-                nuevo_producto = Producto(nombre=nombre, precio=precio, stock_actual=stock)
+                nuevo_producto = Producto(nombre=nombre, precio=precio, stock_actual=stock, activo=True)
                 session.add(nuevo_producto)
                 session.commit()
-                messagebox.showinfo("Producto Añadido", f"Producto '{nombre}' añadido con éxito.")
-                self.listar_productos()
+            self.listar_productos()
 
-    def actualizar_stock_producto(self):
-        # Selecciona un producto de la lista para actualizar su stock
+
+    def actualizar_producto(self):
         seleccion = self.lista_productos.selection()
         if seleccion:
             item = self.lista_productos.item(seleccion)
             producto_id = item['values'][0]
-            nueva_cantidad = simpledialog.askinteger("Actualizar Stock", "Introduce la nueva cantidad de stock:", initialvalue=0)
-            if nueva_cantidad is not None:
-                actualizar_stock(producto_id, nueva_cantidad - obtener_stock_actual(producto_id))
-                messagebox.showinfo("Stock Actualizado", "El stock ha sido actualizado con éxito.")
-                self.listar_productos()
+            with Session() as session:
+                producto = session.query(Producto).filter_by(id=producto_id).first()
+                nombre, precio, stock = abrir_dialogo_producto(self, producto)
+                if nombre:
+                    producto.nombre = nombre
+                    producto.precio = precio
+                    producto.stock_actual = stock
+                    session.commit()
+            self.listar_productos()
+
+    def actualizar_stock_producto(self):
+        seleccion = self.lista_productos.selection()
+        if seleccion:
+            item = self.lista_productos.item(seleccion)
+            producto_id = item['values'][0]
+            with Session() as session:
+                producto = session.query(Producto).filter_by(id=producto_id).one()
+                nombre, precio, stock = abrir_dialogo_producto(self, producto)
+                if nombre and precio and stock is not None:
+                    producto.nombre = nombre
+                    producto.precio = precio
+                    producto.stock_actual = stock
+                    session.commit()
+                    messagebox.showinfo("Producto Actualizado", f"Producto '{nombre}' actualizado con éxito.")
+                    self.listar_productos()
+        else:
+            messagebox.showerror("Error", "Por favor, selecciona un producto de la lista.")
+
+    def eliminar_producto(self):
+        seleccion = self.lista_productos.selection()
+        if seleccion:
+            item = self.lista_productos.item(seleccion)
+            producto_id = item['values'][0]
+            confirmacion = messagebox.askyesno("Eliminar Producto", "¿Estás seguro de que quieres eliminar este producto?")
+            if confirmacion:
+                with Session() as session:
+                    producto = session.query(Producto).filter_by(id=producto_id).one()
+                    producto.activo = False  # Asumiendo que tienes una columna 'activo' en tu modelo
+                    session.commit()
+                    messagebox.showinfo("Producto Eliminado", f"El producto '{producto.nombre}' ha sido eliminado con éxito.")
+                    self.listar_productos()
         else:
             messagebox.showerror("Error", "Por favor, selecciona un producto de la lista.")

@@ -36,3 +36,19 @@ def eliminar_producto(producto_id):
         producto = session.query(Producto).filter_by(id=producto_id).one()
         session.delete(producto)
         session.commit()
+
+def actualizar_producto(producto_id, nombre, precio, stock_actual):
+    """Actualiza los detalles de un producto específico."""
+    with Session() as session:
+        producto = session.query(Producto).filter_by(id=producto_id).one()
+        producto.nombre = nombre
+        producto.precio = precio
+        producto.stock_actual = stock_actual
+        session.commit()
+
+def deshabilitar_producto(producto_id):
+    """Marca un producto como deshabilitado en lugar de eliminarlo físicamente."""
+    with Session() as session:
+        producto = session.query(Producto).filter_by(id=producto_id).one()
+        producto.estado = 'deshabilitado'  # Asumiendo que existe este campo
+        session.commit()
