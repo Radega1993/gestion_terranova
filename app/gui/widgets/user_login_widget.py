@@ -10,17 +10,25 @@ class UserLoginWidget(tk.Frame):
         super().__init__(parent, bg="#f0f0f0")
         self.login_success_callback = login_success_callback
         self.configure(bg="#f0f0f0")
-        self.grid_columnconfigure(0, weight=1)  # Centrar contenido
+        self.grid_columnconfigure(0, weight=1)
+        
+        # Inicializa los widgets de login y registro al inicio
         self.create_login_widgets()
         self.create_register_widgets()
+        
+        # Inicialmente, solo muestra los widgets de login
+        self.show_login_widgets()
 
     def create_widgets_common_style(self, widget):
-        widget.configure(
-            bg="#f0f0f0",
-            fg="#333",
-            font=("Arial", 12)
-        )
+        if isinstance(widget, tk.Entry):
+            widget.configure(bg="white")
+        widget.configure(bg="#f0f0f0", fg="#333", font=("Arial", 12))
         return widget
+
+    def destroy_widgets(self):
+        # Destruye todos los widgets en el Frame actual.
+        for widget in self.winfo_children():
+            widget.destroy()
 
     def create_login_widgets(self):
         # Marco para el formulario con borde y padding
@@ -47,53 +55,38 @@ class UserLoginWidget(tk.Frame):
         login_frame.columnconfigure(1, weight=1)
 
     def create_register_widgets(self):
-        self.lbl_nombre_register = self.create_widgets_common_style(tk.Label(self, text="Nombre completo:"))
-        self.nombre_register_entry = self.create_widgets_common_style(tk.Entry(self))
+        # Marco para el formulario con borde y padding
+        register_frame = tk.LabelFrame(self, text="Registro", bg="#f0f0f0", font=("Arial", 14, "bold"), labelanchor="n", padx=20, pady=20)
+        register_frame.grid(padx=100, pady=60, sticky="nsew")
+ 
+        self.lbl_nombre_register = self.create_widgets_common_style(tk.Label(register_frame, text="Nombre completo:"))
+        self.nombre_register_entry = tk.Entry(register_frame, bg="white")
+        self.lbl_email_register = self.create_widgets_common_style(tk.Label(register_frame, text="Correo electrónico:"))
+        self.email_register_entry = tk.Entry(register_frame, bg="white")
+        self.lbl_password_register = self.create_widgets_common_style(tk.Label(register_frame, text="Contraseña:"))
+        self.password_register_entry = tk.Entry(register_frame, show="*", bg="white")
+        self.register_button = self.create_widgets_common_style(tk.Button(register_frame, text="Registrar", command=self.register))
+        self.login_screen_button = self.create_widgets_common_style(tk.Button(register_frame, text="Volver a inicio de sesión", command=self.show_login_widgets))
 
-        self.lbl_email_register = self.create_widgets_common_style(tk.Label(self, text="Correo electrónico:"))
-        self.email_register_entry = self.create_widgets_common_style(tk.Entry(self))
+        self.lbl_nombre_register.grid(in_=register_frame, row=0, column=0, sticky="w", padx=10, pady=5)
+        self.nombre_register_entry.grid(in_=register_frame, row=0, column=1, sticky="ew", padx=10, pady=5)
+        self.lbl_email_register.grid(in_=register_frame, row=1, column=0, sticky="w", padx=10, pady=5)
+        self.email_register_entry.grid(in_=register_frame, row=1, column=1, sticky="ew", padx=10, pady=5)
+        self.lbl_password_register.grid(in_=register_frame, row=2, column=0, sticky="w", padx=10, pady=5)
+        self.password_register_entry.grid(in_=register_frame, row=2, column=1, sticky="ew", padx=10, pady=5)
+        self.register_button.grid(in_=register_frame, row=3, column=0, columnspan=2, sticky="ew", padx=10, pady=10)
+        self.login_screen_button.grid(in_=register_frame, row=4, column=0, columnspan=2, sticky="ew", padx=10, pady=10)
 
-        self.lbl_password_register = self.create_widgets_common_style(tk.Label(self, text="Contraseña:"))
-        self.password_register_entry = self.create_widgets_common_style(tk.Entry(self, show="*"))
-        self.register_button = self.create_widgets_common_style(tk.Button(self, text="Registrar", command=self.register))
-        self.login_screen_button = self.create_widgets_common_style(tk.Button(self, text="Volver a inicio de sesión", command=self.show_login_widgets))
-
-        # Esconder por defecto
-        for widget in [self.nombre_register_entry, self.email_register_entry, self.password_register_entry, self.register_button, self.login_screen_button]:
-            widget.pack_forget()
+        # Asegúrate de que el contenedor de registro ajuste su tamaño según el contenido
+        register_frame.columnconfigure(1, weight=1)
 
     def show_login_widgets(self):
-        # Ocultar widgets de registro
-        for widget in [self.lbl_nombre_register, self.nombre_register_entry, self.lbl_email_register, self.email_register_entry, self.lbl_password_register, self.password_register_entry, self.register_button, self.login_screen_button]:
-            widget.grid_remove() 
-        # Mostrar widgets de login
-        self.email_login_entry.pack()
-        self.password_login_entry.pack()
-        self.login_button.pack()
-        self.register_screen_button.pack()
-
-        # Esconder widgets de registro
-        self.nombre_register_entry.pack_forget()
-        self.email_register_entry.pack_forget()
-        self.password_register_entry.pack_forget()
-        self.register_button.pack_forget()
-        self.login_screen_button.pack_forget()
-
+        self.destroy_widgets()
+        self.create_login_widgets()
+        
     def show_register_widgets(self):
-        # Ocultar widgets de login
-        for widget in [self.lbl_email_login, self.email_login_entry, self.lbl_password_login, self.password_login_entry, self.login_button, self.register_screen_button]:
-            widget.grid_remove()  # Usa grid_remove para ocultar los widgets
-
-            # Mostrar widgets de registro usando .grid()
-            self.lbl_nombre_register.grid(row=0, column=0, sticky="w", padx=10, pady=10)
-            self.nombre_register_entry.grid(row=0, column=1, pady=10, padx=10, sticky="ew")
-            self.lbl_email_register.grid(row=1, column=0, sticky="w", padx=10, pady=10)
-            self.email_register_entry.grid(row=1, column=1, pady=10, padx=10, sticky="ew")
-            self.lbl_password_register.grid(row=2, column=0, sticky="w", padx=10, pady=10)
-            self.password_register_entry.grid(row=2, column=1, pady=10, padx=10, sticky="ew")
-            self.register_button.grid(row=3, column=0, columnspan=2, pady=20, padx=10, sticky="ew")
-            self.login_screen_button.grid(row=4, column=0, columnspan=2, padx=10, sticky="ew")
-
+        self.destroy_widgets()
+        self.create_register_widgets()
 
     def login(self):
         email = self.email_login_entry.get()
