@@ -10,34 +10,30 @@ class ProductManagementWidget(tk.Frame):
         super().__init__(parent)
         self.configure(bg='#f0f0f0')  # Fondo claro para el frame
 
-        self.style = ttk.Style()
-        self.style.configure("Treeview", font=('Helvetica', 12), rowheight=25)
-        self.style.configure("Treeview.Heading", font=('Helvetica', 13, 'bold'))
+        style = ttk.Style()
+        style.configure("Treeview", font=('Helvetica', 12), rowheight=25)
+        style.configure("Treeview.Heading", font=('Helvetica', 13, 'bold'))
+        style.map("TButton", foreground=[('pressed', 'white'), ('active', 'white')],
+          background=[('pressed', '!disabled', '#4a69bd'), ('active', '#4a69bd')])
 
         self.create_widgets()
         self.listar_productos()
 
     def create_widgets(self):
-        # Frame para los botones
         self.frame_botones = tk.Frame(self, bg='#f0f0f0')
         self.frame_botones.pack(fill=tk.X, padx=10, pady=5)
 
-        # Botones con iconos (asumiendo que tienes los iconos disponibles)
-        # self.icono_recargar = tk.PhotoImage(file='recargar.png')
-        self.btn_recargar = ttk.Button(self.frame_botones, text="Recargar Lista", command=self.listar_productos)  # , image=self.icono_recargar
-        self.btn_recargar.pack(side=tk.LEFT, padx=5, pady=5)
+        self.btn_recargar = ttk.Button(self.frame_botones, text="Recargar Lista", command=self.listar_productos)
+        self.btn_recargar.pack(side=tk.LEFT, padx=5)
 
-        # self.icono_añadir = tk.PhotoImage(file='añadir.png')
-        self.btn_añadir_producto = ttk.Button(self.frame_botones, text="Añadir Producto", command=self.añadir_producto)  # , image=self.icono_añadir
-        self.btn_añadir_producto.pack(side=tk.LEFT, padx=5, pady=5)
+        self.btn_añadir_producto = ttk.Button(self.frame_botones, text="Añadir Producto", command=self.añadir_producto)
+        self.btn_añadir_producto.pack(side=tk.LEFT, padx=5)
 
-        # self.icono_actualizar = tk.PhotoImage(file='actualizar.png')
-        self.btn_actualizar_stock = ttk.Button(self.frame_botones, text="Actualizar Stock", command=self.actualizar_stock_producto)  # , image=self.icono_actualizar
-        self.btn_actualizar_stock.pack(side=tk.LEFT, padx=5, pady=5)
+        self.btn_actualizar_stock = ttk.Button(self.frame_botones, text="Actualizar Producto", command=self.actualizar_producto)
+        self.btn_actualizar_stock.pack(side=tk.LEFT, padx=5)
 
-        # self.icono_eliminar = tk.PhotoImage(file='eliminar.png')
-        self.btn_eliminar_producto = ttk.Button(self.frame_botones, text="Eliminar Producto", command=self.eliminar_producto)  # , image=self.icono_eliminar
-        self.btn_eliminar_producto.pack(side=tk.LEFT, padx=5, pady=5)
+        self.btn_eliminar_producto = ttk.Button(self.frame_botones, text="Eliminar Producto", command=self.eliminar_producto)
+        self.btn_eliminar_producto.pack(side=tk.LEFT, padx=5)
 
         # Lista de productos con scrollbar
         self.frame_lista = tk.Frame(self)

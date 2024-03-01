@@ -1,5 +1,6 @@
 # Modelos de la base de datos (tablas, relaciones)
 
+import datetime
 from sqlalchemy import Boolean, Column, Integer, String, Float, ForeignKey, Date
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
@@ -37,8 +38,16 @@ class Usuario(Base):
     id = Column(Integer, primary_key=True)
     nombre = Column(String, nullable=False)
     correo_electronico = Column(String, unique=True, nullable=False)
-    tipo_usuario = Column(String, nullable=False)  # Ejemplo: 'trabajador' o 'cliente'
+    tipo_usuario = Column(String, nullable=False)
     contrasena_hash = Column(String, nullable=False)
 
     def set_password(self, password):
         self.contrasena_hash = generate_password_hash(password)
+
+class Socio(Base):
+    __tablename__ = 'socios'
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String, nullable=False)
+    correo_electronico = Column(String, nullable=False, unique=True)
+    fecha_inscripcion = Column(Date, default=datetime.datetime.utcnow)
+    activo = Column(Boolean, default=True)

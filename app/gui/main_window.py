@@ -6,6 +6,7 @@ from tkinter import messagebox, ttk
 from app.gui.widgets.user_login_widget import UserLoginWidget
 from app.gui.widgets.user_management_widget import UserManagementWidget
 from app.gui.widgets.product_management_widget import ProductManagementWidget
+from app.gui.widgets.socio_management_widget import SocioManagementWidget
 
 class MainWindow(tk.Tk):
     def __init__(self):
@@ -46,6 +47,12 @@ class MainWindow(tk.Tk):
         self.user_management_tab = tk.Frame(self.tab_control)
         self.tab_control.add(self.user_management_tab, text="Gestión de Clientes")
         self.user_management_widget = UserManagementWidget(self.user_management_tab)
+        self.user_management_widget.pack(expand=True, fill='both')
+
+        # Pestaña de gestión de Socios
+        self.socio_manager_tab = tk.Frame(self.tab_control)
+        self.tab_control.add(self.socio_manager_tab, text="Gestión de Socios")
+        self.user_management_widget = SocioManagementWidget(self.socio_manager_tab)
         self.user_management_widget.pack(expand=True, fill='both')
 
         # Pestaña de gestión de productos
