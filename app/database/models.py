@@ -20,8 +20,15 @@ class Producto(Base):
 class Venta(Base):
     __tablename__ = 'ventas'
     id = Column(Integer, primary_key=True)
-    fecha = Column(Date, nullable=False)
+    fecha = Column(Date, nullable=False, default=datetime.now(timezone.utc))
     total = Column(Float, nullable=False)
+    socio_id = Column(Integer, ForeignKey('socios.id'), nullable=True)  # Puede ser nullable si no todas las ventas son a socios
+    trabajador_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
+    pagada = Column(Boolean, default=True)  # Por defecto True, suponiendo que la mayoría de ventas se pagan al momento
+
+    # Relaciones
+    socio = relationship("app.database.models.Socio", backref="ventas")  # Permite acceder a las ventas desde el socio
+    trabajador = relationship("app.database.models.Usuario", backref="ventas_realizadas")  # Permite acceder a las ventas realizadas por el trabajador
     detalles = relationship("app.database.models.DetalleVenta", backref="venta")
 
 class Usuario(Base):
@@ -59,7 +66,7 @@ class Deuda(Base):
 class DetalleVenta(Base):
     __tablename__ = 'detalles_venta'
     id = Column(Integer, primary_key=True)
-    venta_id = Column(Integer, ForeignKey('ventas.id'), nullable=False)
+    venta_id = Column(Integer, ForeignKey('ventas.id'), nullable=True)
     producto_id = Column(Integer, ForeignKey('productos.id'), nullable=False)
     cantidad = Column(Integer, nullable=False)
     precio = Column(Float, nullable=False)

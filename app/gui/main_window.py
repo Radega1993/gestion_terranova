@@ -17,7 +17,7 @@ class MainWindow(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Gestión Terranova")
-        self.geometry("800x600")  # Configura el tamaño de la ventana aquí
+        self.geometry("1200x800")  # Configura el tamaño de la ventana aquí
 
         self.current_user = None
         

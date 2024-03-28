@@ -1,21 +1,29 @@
 # Gestión de ventas
-from datetime import date
+from datetime import datetime, timezone
 from sqlalchemy.exc import SQLAlchemyError
 from app.database.models import DetalleVenta, Producto, Venta
 
-def procesar_venta(session, detalles_venta):
+def procesar_venta(session, socio_id, detalles_venta, total_venta, trabajador_id):
     try:
-        venta = Venta(fecha=date.today(), total=0)
-        session.add(venta)
-        total_venta = 0
+        # Creamos una nueva venta
+        nueva_venta = Venta(
+            fecha=datetime.now(timezone.utc),
+            total=total_venta,
+            socio_id=socio_id,
+            trabajador_id=trabajador_id,
+            pagada=True  # Asumimos que esta función procesa ventas pagadas
+        )
+        session.add(nueva_venta)
+
         for detalle in detalles_venta:
-            producto = session.query(Producto).filter(Producto.id == detalle['producto_id']).one()
+            producto = session.query(Producto).filter_by(id=detalle['producto_id']).one()
             if producto.stock_actual >= detalle['cantidad']:
+                # Actualizamos el stock del producto
                 producto.stock_actual -= detalle['cantidad']
-                total_linea = detalle['cantidad'] * producto.precio
-                total_venta += total_linea
+                
+                # Creamos el detalle de la venta
                 detalle_venta = DetalleVenta(
-                    venta=venta,  # Aquí cambiamos venta_id por venta gracias a la relación definida en los modelos
+                    venta=nueva_venta,
                     producto_id=detalle['producto_id'],
                     cantidad=detalle['cantidad'],
                     precio=producto.precio
@@ -23,11 +31,11 @@ def procesar_venta(session, detalles_venta):
                 session.add(detalle_venta)
             else:
                 raise Exception(f"Stock insuficiente para el producto {producto.nombre}")
-        venta.total = total_venta
+
         session.commit()
-        return venta.id  # Devolvemos el ID de la venta procesada como confirmación
+        return nueva_venta.id
     except SQLAlchemyError as e:
-        session.rollback()  # En caso de error, revertimos la transacción
+        session.rollback()
         raise e
 
 def obtener_informe_ventas(session, fecha_inicio, fecha_fin):

@@ -17,13 +17,11 @@ def obtener_productos():
         productos = session.query(Producto).all()
         return productos  # Retorna una lista de objetos Producto
 
-def actualizar_stock(producto_id, cantidad):
+def actualizar_stock(session, producto_id, cantidad):
     """Actualiza el stock de un producto específico."""
-    with Session() as session:
-        producto = session.query(Producto).filter_by(id=producto_id).one()
-        producto.stock_actual += cantidad
-        session.commit()
-
+    producto = session.query(Producto).filter_by(id=producto_id).one()
+    producto.stock_actual += cantidad
+        
 def obtener_stock_actual(producto_id):
     """Obtiene el stock actual de un producto específico."""
     with Session() as session:

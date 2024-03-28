@@ -4,6 +4,7 @@ from app.database.connection import Session
 from app.database.models import Usuario
 from app.logic.users import crear_usuario, obtener_usuario_por_correo
 from werkzeug.security import check_password_hash
+from app.logic.EstadoApp import EstadoApp 
 
 class UserLoginWidget(tk.Frame):
     def __init__(self, parent, login_success_callback):
@@ -94,6 +95,7 @@ class UserLoginWidget(tk.Frame):
         with Session() as session:
             usuario = session.query(Usuario).filter_by(correo_electronico=email).first()
             if usuario and check_password_hash(usuario.contrasena_hash, password):
+                EstadoApp.set_usuario_logueado_id(usuario.id)
                 self.login_success_callback(usuario)
             else:
                 messagebox.showerror("Error", "Inicio de sesión fallido. Verifica tu correo electrónico y contraseña.")
