@@ -24,6 +24,12 @@ def desactivar_socio(socio_id):
         socio.activo = False
         session.commit()
 
+def activar_socio(socio_id):
+    with Session() as session:
+        socio = session.query(Socio).filter_by(id=socio_id).one()
+        socio.activo = True
+        session.commit()
+
 def actualizar_socio(socio_id, nombre, correo_electronico):
     with Session() as session:
         socio = session.query(Socio).filter_by(id=socio_id).one()

@@ -13,3 +13,13 @@ source venv/bin/activate
 ```bash
 deactivate
 ```
+
+4. Instalar requirements
+```bash
+pip install -r requirements.txt
+```
+
+5. Iniciar proyecto
+```bash
+python -m app.gui.main_window
+```

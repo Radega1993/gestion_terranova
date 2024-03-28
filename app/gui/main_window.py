@@ -1,12 +1,17 @@
 # Ventana principal de la aplicación
 import tkinter as tk
 from tkinter import messagebox, ttk
+import logging
 
 # Importaciones de los widgets que necesitas
 from app.gui.widgets.user_login_widget import UserLoginWidget
 from app.gui.widgets.user_management_widget import UserManagementWidget
 from app.gui.widgets.product_management_widget import ProductManagementWidget
 from app.gui.widgets.socio_management_widget import SocioManagementWidget
+from app.gui.widgets.bar_cobros_widget import BarCobrosWidget
+
+logging.basicConfig()
+logging.getLogger('sqlalchemy.engine').setLevel(logging.INFO)
 
 class MainWindow(tk.Tk):
     def __init__(self):
@@ -54,6 +59,12 @@ class MainWindow(tk.Tk):
         self.tab_control.add(self.socio_manager_tab, text="Gestión de Socios")
         self.user_management_widget = SocioManagementWidget(self.socio_manager_tab)
         self.user_management_widget.pack(expand=True, fill='both')
+
+        # Pestaña de cobros en el bar
+        self.bar_cobros_tab = tk.Frame(self.tab_control)
+        self.tab_control.add(self.bar_cobros_tab, text="Cobros")
+        self.bar_cobros_widget = BarCobrosWidget(self.bar_cobros_tab)
+        self.bar_cobros_widget.pack(expand=True, fill='both')
 
         # Pestaña de gestión de productos
         self.product_management_tab = tk.Frame(self.tab_control)

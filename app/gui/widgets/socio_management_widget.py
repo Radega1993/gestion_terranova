@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from app.gui.widgets.socio_dialog import abrir_dialogo_socio
-from app.logic.socios import actualizar_socio, crear_socio, desactivar_socio, obtener_socio_por_id, obtener_socios
+from app.logic.socios import actualizar_socio, crear_socio, desactivar_socio, activar_socio, obtener_socio_por_id, obtener_socios
 
 class SocioManagementWidget(tk.Frame):
     def __init__(self, parent):
@@ -27,6 +27,9 @@ class SocioManagementWidget(tk.Frame):
 
         self.btn_desactivar_socio = ttk.Button(self.frame_botones, text="Desactivar Socio", command=self.desactivar_socio_seleccionado)
         self.btn_desactivar_socio.pack(side=tk.LEFT, padx=5)
+
+        self.btn_activar_socio = ttk.Button(self.frame_botones, text="Activar Socio", command=self.activar_socio_seleccionado)
+        self.btn_activar_socio.pack(side=tk.LEFT, padx=5)
 
         self.lista_socios = ttk.Treeview(self, columns=("ID", "Nombre", "Correo electrónico", "Activo"), show="headings", selectmode="browse")
         for col in self.lista_socios['columns']:
@@ -66,4 +69,14 @@ class SocioManagementWidget(tk.Frame):
             confirmacion = messagebox.askyesno("Desactivar Socio", "¿Estás seguro de que quieres desactivar este socio?")
             if confirmacion:
                 desactivar_socio(socio_id)
+                self.listar_socios()
+    
+    def activar_socio_seleccionado(self):
+        seleccion = self.lista_socios.selection()
+        if seleccion:
+            item = self.lista_socios.item(seleccion)
+            socio_id = item['values'][0]
+            confirmacion = messagebox.askyesno("Activar Socio", "¿Estás seguro de que quieres activar a este socio?")
+            if confirmacion:
+                activar_socio(socio_id)
                 self.listar_socios()
