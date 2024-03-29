@@ -221,4 +221,25 @@ class BarCobrosWidget(tk.Frame):
         self.total_consumicion = 0
         self.label_precio_total.config(text="Precio total: 0€")
         self.socio_actual = None
-        # Actualizar la UI según sea necesario
+        self.actualizar_datos()
+
+    def actualizar_datos(self):
+        # 1. Limpia la lista de productos disponibles y productos consumidos
+        for i in self.lista_productos_stock.get_children():
+            self.lista_productos_stock.delete(i)
+        for i in self.lista_productos_consumidos.get_children():
+            self.lista_productos_consumidos.delete(i)
+        
+        # 2. Recargar stock de productos desde la base de datos
+        self.cargar_stock_productos()
+
+        # 3. Resetear estado interno
+        self.productos_consumidos.clear()
+        self.total_consumicion = 0
+        self.socio_actual = None
+        self.label_precio_total.config(text="Precio total: 0€")
+        self.label_info_socio.config(text="")
+        self.label_estado_deuda.config(text="")
+        self.entry_id_socio.delete(0, tk.END)  # Limpiar el campo de entrada del ID del socio
+
+        # Si hay más estados o datos para resetear, añádelos aquí

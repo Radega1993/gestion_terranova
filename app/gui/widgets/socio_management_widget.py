@@ -80,3 +80,7 @@ class SocioManagementWidget(tk.Frame):
             if confirmacion:
                 activar_socio(socio_id)
                 self.listar_socios()
+
+    def actualizar_datos(self):
+            """Actualiza la lista de productos mostrada al usuario."""
+            self.listar_socios()

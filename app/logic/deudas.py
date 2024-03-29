@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
 from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy import func
 from app.database.connection import Session
-from app.database.models import Deuda, DetalleVenta, Producto
+from app.database.models import Deuda, DetalleVenta, Producto, Socio, Venta
+from app.logic.EstadoApp import EstadoApp
 
 def verificar_deudas_socio(socio_id):
     """Verifica si un socio tiene deudas pendientes."""
@@ -15,6 +17,7 @@ def obtener_deudas_socio(socio_id):
     with Session() as session:
         deudas_con_total = []
         deudas = session.query(Deuda).filter_by(socio_id=socio_id, pagada=False).all()
+        
         for deuda in deudas:
             deuda_info = {
                 "deuda": deuda,
@@ -67,3 +70,37 @@ def procesar_deuda(session, socio_id, detalles_venta, total_venta, trabajador_id
     except SQLAlchemyError as e:
         session.rollback()
         raise e
+
+def obtener_deudas_agrupadas():
+    with Session() as session:
+        resultado = session.query(
+            Socio.nombre, 
+            Socio.id.label("socio_id"),
+            func.sum(Deuda.total).label("total_deuda")
+        ).join(Deuda, Socio.id == Deuda.socio_id).filter(
+            Deuda.pagada == False
+        ).group_by(Socio.id).all()
+
+        return [{"nombre": nombre, "socio_id": socio_id, "total_deuda": total_deuda} for nombre, socio_id, total_deuda in resultado]
+
+def procesar_pago(socio_id):
+    with Session() as session:
+        # 1. Crea una nueva Venta
+        trabajador_id = EstadoApp.get_usuario_logueado_id()
+        nueva_venta = Venta(fecha=datetime.now(timezone.utc), total=0, socio_id=socio_id, trabajador_id=trabajador_id, pagada=True)
+        session.add(nueva_venta)
+        session.flush()  # Para obtener el ID de la nueva venta
+        
+        # 2. Encuentra y actualiza las deudas y detalles de venta
+        total = 0
+        deudas = session.query(Deuda).filter(Deuda.socio_id == socio_id, Deuda.pagada == False).all()
+        for deuda in deudas:
+            deuda.pagada = True
+            for detalle in deuda.detalles_venta:
+                detalle.venta_id = nueva_venta.id  # Asocia el detalle de venta con la nueva venta
+                total += detalle.precio * detalle.cantidad
+        
+        # Actualiza el total de la nueva venta
+        nueva_venta.total = total
+
+        session.commit()

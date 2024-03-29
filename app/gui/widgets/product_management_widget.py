@@ -118,3 +118,7 @@ class ProductManagementWidget(tk.Frame):
                     self.listar_productos()
         else:
             messagebox.showerror("Error", "Por favor, selecciona un producto de la lista.")
+
+    def actualizar_datos(self):
+        """Actualiza la lista de productos mostrada al usuario."""
+        self.listar_productos()
