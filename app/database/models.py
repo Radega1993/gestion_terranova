@@ -1,7 +1,7 @@
 # Modelos de la base de datos (tablas, relaciones)
 
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, ForeignKey, Float, Date, Boolean, String
+from sqlalchemy import Column, Integer, ForeignKey, Float, Date, Boolean, String, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from werkzeug.security import generate_password_hash
@@ -72,3 +72,17 @@ class DetalleVenta(Base):
     precio = Column(Float, nullable=False)
     producto = relationship("app.database.models.Producto")
     deuda_id = Column(Integer, ForeignKey('deudas.id'))
+
+class Reserva(Base):
+    __tablename__ = 'reservas'
+    id = Column(Integer, primary_key=True)
+    socio_id = Column(Integer, ForeignKey('socios.id'), nullable=False)
+    fecha_reserva = Column(Date, nullable=False)
+    fecha_creacion = Column(DateTime, default=datetime.now)
+    recepcionista_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
+    importe_abonado = Column(Float, nullable=False)
+    opciones_adicionales = Column(String) 
+    pagada = Column(Boolean, default=False) 
+    
+    socio = relationship("app.database.models.Socio")
+    recepcionista = relationship("app.database.models.Usuario")
