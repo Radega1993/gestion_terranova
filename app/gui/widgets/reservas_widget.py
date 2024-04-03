@@ -4,14 +4,16 @@ from tkinter import ttk, messagebox
 from tkcalendar import Calendar
 
 from app.database.connection import Session
-from app.database.models import Reserva, Socio
+from app.database.models import Reserva, Servicio, Socio
 from app.logic.reservations import obtener_fechas_reservadas
 
 class ReservasWidget(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent)
         self.session = Session()
+        self.servicios = {}
         self.create_widgets()
+        self.cargar_servicios() 
         self.cargar_reservas_existentes()
 
 
@@ -23,12 +25,12 @@ class ReservasWidget(tk.Frame):
         # Dropdown para seleccionar el servicio a reservar
         self.servicio_label = tk.Label(self, text="Servicio a Reservar:")
         self.servicio_label.pack()
-        
-        self.servicios = ["Barbacoa", "Sala", "Barbacoa + Sala", "Pista"]
+             
         self.servicio_var = tk.StringVar()
-        self.servicio_combobox = ttk.Combobox(self, textvariable=self.servicio_var, values=self.servicios, state="readonly")
+        self.servicio_combobox = ttk.Combobox(self, textvariable=self.servicio_var, state="readonly")
         self.servicio_combobox.pack()
 
+        self.servicio_combobox.bind("<<ComboboxSelected>>", self.actualizar_precio_servicio)
 
         # Añadir campos para el número de socio y el importe abonado
         self.socio_id_label = tk.Label(self, text="Número de Socio:")
@@ -49,6 +51,11 @@ class ReservasWidget(tk.Frame):
         self.suplemento_exclusividad_var = tk.BooleanVar()
         self.suplemento_exclusividad_check = tk.Checkbutton(self, text="Suplemento Exclusividad (25€)", variable=self.suplemento_exclusividad_var)
         self.suplemento_exclusividad_check.pack()
+
+        # Etiqueta para mostrar el precio del servicio seleccionado
+        self.precio_servicio_label = tk.Label(self, text="Precio: ")
+        self.precio_servicio_label.pack()
+
 
         # Botón para confirmar la fecha seleccionada
         self.btn_confirmar_fecha = ttk.Button(self, text="Confirmar Fecha", command=self.confirmar_fecha)
@@ -105,8 +112,25 @@ class ReservasWidget(tk.Frame):
         messagebox.showinfo("Reserva Confirmada", f"La reserva ha sido confirmada para el {fecha_reserva}.")
         self.cargar_reservas_existentes()
 
+    def cargar_servicios(self):
+        """Carga los servicios desde la base de datos y actualiza el combobox."""
+        with self.session as session:
+            servicios = session.query(Servicio).filter(Servicio.activo==True).all()
+            self.servicios = {servicio.nombre: servicio.precio for servicio in servicios}
+            self.servicio_combobox['values'] = list(self.servicios.keys())
 
-
+    def actualizar_precio_servicio(self, event=None):
+        """Calcula y muestra el precio total basado en el servicio y suplementos seleccionados."""
+        servicio_seleccionado = self.servicio_var.get()
+        precio_base = self.servicios.get(servicio_seleccionado, 0)
+        precio_suplementos = 0
+        if self.aire_acondicionado_var.get():
+            precio_suplementos += 10
+        if self.suplemento_exclusividad_var.get():
+            precio_suplementos += 25
+        precio_total = precio_base + precio_suplementos
+        self.precio_servicio_label.config(text=f"Precio total: {precio_total}€")
+    
     def cargar_reservas_existentes(self):
         fechas_reservadas = obtener_fechas_reservadas(self.session)
         for fecha in fechas_reservadas:
@@ -114,7 +138,6 @@ class ReservasWidget(tk.Frame):
             fecha_codificada = datetime.strptime(fecha, '%Y-%m-%d').date()
             self.calendario.calevent_create(fecha_codificada, 'Reservado', 'reserva')
             self.calendario.tag_config('reserva', background='red', foreground='white')
-
 
     def mostrar_reservas_dia(self, event=None):
         fecha_seleccionada = self.calendario.get_date()

@@ -86,3 +86,10 @@ class Reserva(Base):
     
     socio = relationship("app.database.models.Socio")
     recepcionista = relationship("app.database.models.Usuario")
+
+class Servicio(Base):
+    __tablename__ = 'servicios'
+    id = Column(Integer, primary_key=True)
+    nombre = Column(String, nullable=False)
+    precio = Column(Float, nullable=False)
+    activo = Column(Boolean, default=True)

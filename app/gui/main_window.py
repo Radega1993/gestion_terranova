@@ -5,6 +5,7 @@ import logging
 
 # Importaciones de los widgets que necesitas
 from app.gui.widgets.deber_management_widget import DeudasWidget
+from app.gui.widgets.servicios_management import ServicioManagementWidget
 from app.gui.widgets.user_login_widget import UserLoginWidget
 from app.gui.widgets.user_management_widget import UserManagementWidget
 from app.gui.widgets.product_management_widget import ProductManagementWidget
@@ -83,12 +84,19 @@ class MainWindow(tk.Tk):
         self.reservas_management_widget = ReservasWidget(self.reservas_management_tab)
         self.reservas_management_widget.pack(expand=True, fill='both')
 
+        # Pestaña de gestión de servicios
+        self.servicios_management_tab = tk.Frame(self.tab_control)
+        self.tab_control.add(self.servicios_management_tab, text="Gestión de Servicios")
+        self.servicios_management_widget = ServicioManagementWidget(self.servicios_management_tab)
+        self.servicios_management_widget.pack(expand=True, fill='both')
+
         self.tab_control.bind("<<NotebookTabChanged>>", self.on_tab_change)
         self.tab_control.add(self.user_management_tab, text="Gestión de Clientes")
         self.tab_control.add(self.socio_manager_tab, text="Gestión de Socios")
         self.tab_control.add(self.bar_cobros_tab, text="Cobros")
         self.tab_control.add(self.deber_tab, text="Deber")
         self.tab_control.add(self.product_management_tab, text="Gestión de Productos")
+        self.tab_control.add(self.reservas_management_tab, text="Gestión de Reservas")
         self.tab_control.add(self.reservas_management_tab, text="Gestión de Reservas")
 
 
@@ -97,6 +105,7 @@ class MainWindow(tk.Tk):
         logout_tab = tk.Frame(self.tab_control)
         logout_button = tk.Button(logout_tab, text="Cerrar sesión", command=self.logout)
         logout_button.pack(pady=10)
+
         self.tab_control.add(logout_tab, text="Opciones Usuario")
     
     def logout(self):
@@ -111,7 +120,6 @@ class MainWindow(tk.Tk):
         widget = widget_class(tab_frame)
         widget.pack(expand=True, fill='both')
         return widget
-
     
     def on_tab_change(self, event):
         selected_tab = event.widget.select()
