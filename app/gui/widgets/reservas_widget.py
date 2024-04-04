@@ -5,6 +5,7 @@ from tkcalendar import Calendar
 
 from app.database.connection import Session
 from app.database.models import Reserva, Servicio, Socio
+from app.gui.widgets.gestion_reservas_dialog import DialogoGestionReserva
 from app.logic.reservations import obtener_fechas_reservadas
 
 class ReservasWidget(tk.Frame):
@@ -12,8 +13,10 @@ class ReservasWidget(tk.Frame):
         super().__init__(parent)
         self.session = Session()
         self.servicios = {}
+        self.suplementos = {} 
+        self.suplementos_vars = {}
         self.create_widgets()
-        self.cargar_servicios() 
+        self.cargar_servicios_suplementos()
         self.cargar_reservas_existentes()
 
 
@@ -38,19 +41,14 @@ class ReservasWidget(tk.Frame):
         self.socio_id_entry = tk.Entry(self)
         self.socio_id_entry.pack()
 
+        # Añadir checkboxes para opciones adicionales
+        self.frame_suplementos = tk.Frame(self)
+        self.frame_suplementos.pack(pady=10)
+
         self.importe_abonado_label = tk.Label(self, text="Importe Abonado:")
         self.importe_abonado_label.pack()
         self.importe_abonado_entry = tk.Entry(self)
         self.importe_abonado_entry.pack()
-
-        # Añadir checkboxes para opciones adicionales
-        self.aire_acondicionado_var = tk.BooleanVar()
-        self.aire_acondicionado_check = tk.Checkbutton(self, text="Aire Acondicionado / Calefacción (10€)", variable=self.aire_acondicionado_var)
-        self.aire_acondicionado_check.pack()
-
-        self.suplemento_exclusividad_var = tk.BooleanVar()
-        self.suplemento_exclusividad_check = tk.Checkbutton(self, text="Suplemento Exclusividad (25€)", variable=self.suplemento_exclusividad_var)
-        self.suplemento_exclusividad_check.pack()
 
         # Etiqueta para mostrar el precio del servicio seleccionado
         self.precio_servicio_label = tk.Label(self, text="Precio: ")
@@ -70,10 +68,13 @@ class ReservasWidget(tk.Frame):
         
         # Enlazar evento de selección en el calendario
         self.calendario.bind("<<CalendarSelected>>", self.mostrar_reservas_dia)
-
+        self.lista_reservas.bind("<Double-1>", self.abrir_dialogo_reserva)
+        
     def confirmar_fecha(self):
         fecha = self.calendario.get_date()  # Fecha en formato 'd/m/YYYY' desde tkcalendar
         socio_id = self.socio_id_entry.get().strip()
+        servicio_seleccionado = self.servicio_var.get()
+        precio_base = self.servicios[servicio_seleccionado]
         importe_abonado = float(self.importe_abonado_entry.get().strip())
 
         # Verificar la existencia del socio
@@ -83,54 +84,71 @@ class ReservasWidget(tk.Frame):
             return
 
         try:
-            # Convierte primero a 'd/m/y', luego a objeto date
             fecha_convertida = datetime.strptime(fecha, "%m/%d/%y").strftime("%d/%m/%Y")
             fecha_reserva = datetime.strptime(fecha_convertida, "%d/%m/%Y").date()
         except ValueError as e:
             messagebox.showerror("Error de formato de fecha", str(e))
             return
+        
+        total_suplementos = sum(self.suplementos[suplemento] for suplemento, var in self.suplementos_vars.items() if var.get())
+        precio_total = precio_base + total_suplementos
 
-        # Calcula opciones adicionales basado en checkboxes y otros inputs
-        opciones_adicionales = ""
-        if self.aire_acondicionado_var.get():
-            opciones_adicionales += "Aire Acondicionado / Calefacción, "
-        if self.suplemento_exclusividad_var.get():
-            opciones_adicionales += "Suplemento Exclusividad, "
-        # Ajustar según necesidad para agregar más opciones
+        opciones_adicionales = [suplemento for suplemento, check_var in self.suplementos_vars.items() if check_var.get()]
+        opciones_adicionales_str = ", ".join(opciones_adicionales)
 
-        nueva_reserva = Reserva(
-            socio_id=socio.id,  # Usa el ID del objeto socio encontrado
-            fecha_reserva=fecha_reserva,
-            recepcionista_id=1,  # Asume un ID de recepcionista; ajusta según sea necesario
-            importe_abonado=importe_abonado,
-            opciones_adicionales=opciones_adicionales.rstrip(", "),  # Elimina la última coma y espacio
-            pagada=False  # Ajusta según la lógica de pago
-        )
-        self.session.add(nueva_reserva)
-        self.session.commit()
+        # Obtener el ID del servicio seleccionado
+        with self.session as session:
+            servicio = session.query(Servicio).filter_by(nombre=servicio_seleccionado, activo=True).first()
+            if servicio is None:
+                messagebox.showerror("Error", "Servicio seleccionado no válido.")
+                return
+
+            nueva_reserva = Reserva(
+                socio_id=socio.id,
+                fecha_reserva=fecha_reserva,
+                recepcionista_id=1,  # Suponiendo que el ID del recepcionista ya esté definido
+                servicio_id=servicio.id,  # Guarda el ID del servicio
+                importe_abonado=importe_abonado,
+                precio=precio_total,
+                opciones_adicionales=opciones_adicionales_str,
+                pagada=importe_abonado == precio_total  # Actualiza según el importe abonado
+            )
+
+            if not (precio_total / 2 <= importe_abonado <= precio_total):
+                messagebox.showerror("Error de Importe", "El importe abonado debe ser entre el 50% y el 100% del precio total.")
+                return
+            
+            session.add(nueva_reserva)
+            session.commit()
 
         messagebox.showinfo("Reserva Confirmada", f"La reserva ha sido confirmada para el {fecha_reserva}.")
         self.cargar_reservas_existentes()
 
-    def cargar_servicios(self):
-        """Carga los servicios desde la base de datos y actualiza el combobox."""
+    def cargar_servicios_suplementos(self):
         with self.session as session:
-            servicios = session.query(Servicio).filter(Servicio.activo==True).all()
-            self.servicios = {servicio.nombre: servicio.precio for servicio in servicios}
+            # Carga servicios y suplementos
+            servicios_query = session.query(Servicio).filter(Servicio.tipo == 'servicio', Servicio.activo == True).all()
+            self.servicios = {servicio.nombre: servicio.precio for servicio in servicios_query}
             self.servicio_combobox['values'] = list(self.servicios.keys())
 
+            suplementos_query = session.query(Servicio).filter(Servicio.tipo == 'suplemento', Servicio.activo == True).all()
+            for suplemento in suplementos_query:
+                check_var = tk.BooleanVar()
+                check_button = tk.Checkbutton(self.frame_suplementos, text=f"{suplemento.nombre} ({suplemento.precio}€)", variable=check_var)
+                check_button.pack(anchor='w')
+                check_var.trace_add("write", lambda *args: self.actualizar_precio_servicio())
+                self.suplementos[suplemento.nombre] = suplemento.precio
+                self.suplementos_vars[suplemento.nombre] = check_var
+    
     def actualizar_precio_servicio(self, event=None):
-        """Calcula y muestra el precio total basado en el servicio y suplementos seleccionados."""
         servicio_seleccionado = self.servicio_var.get()
         precio_base = self.servicios.get(servicio_seleccionado, 0)
-        precio_suplementos = 0
-        if self.aire_acondicionado_var.get():
-            precio_suplementos += 10
-        if self.suplemento_exclusividad_var.get():
-            precio_suplementos += 25
-        precio_total = precio_base + precio_suplementos
+        
+        total_suplementos = sum(self.suplementos[suplemento] for suplemento, var in self.suplementos_vars.items() if var.get())
+        precio_total = precio_base + total_suplementos
+        
         self.precio_servicio_label.config(text=f"Precio total: {precio_total}€")
-    
+
     def cargar_reservas_existentes(self):
         fechas_reservadas = obtener_fechas_reservadas(self.session)
         for fecha in fechas_reservadas:
@@ -141,25 +159,38 @@ class ReservasWidget(tk.Frame):
 
     def mostrar_reservas_dia(self, event=None):
         fecha_seleccionada = self.calendario.get_date()
-        
+
         try:
             fecha_convertida = datetime.strptime(fecha_seleccionada, "%m/%d/%y").strftime("%d/%m/%Y")
             fecha_reserva = datetime.strptime(fecha_convertida, "%d/%m/%Y").date()
         except ValueError as e:
-            messagebox.showerror("Error de formato de fecha", f"Error interpretando la fecha seleccionada: {fecha_seleccionada}\nDetalle: {str(e)}")
+            messagebox.showerror("Error de formato de fecha", str(e))
             return
-        
+
         # Limpiar el listbox antes de agregar nuevas entradas
         self.lista_reservas.delete(0, tk.END)
-        
-        # Buscar reservas para la fecha seleccionada
-        reservas_dia = self.session.query(Reserva).filter_by(fecha_reserva=fecha_reserva).all()
-        
+
+        # Buscar reservas para la fecha seleccionada incluyendo nombre del socio y del servicio
+        with self.session as session:
+            reservas_dia = session.query(Reserva, Socio.nombre, Servicio.nombre).\
+                join(Socio, Reserva.socio_id == Socio.id).\
+                join(Servicio, Reserva.servicio_id == Servicio.id).\
+                filter(Reserva.fecha_reserva == fecha_reserva).all()
+
         if reservas_dia:
-            # Agregar cada reserva al listbox
-            for reserva in reservas_dia:
-                reserva_info = f"Socio ID: {reserva.socio_id}, Servicio: {reserva.opciones_adicionales}, Importe: {reserva.importe_abonado}"
+            for reserva, nombre_socio, nombre_servicio in reservas_dia:
+                reserva_info = f"ID: {reserva.id}, Socio: {nombre_socio}, Servicio: {nombre_servicio}, Adicionales: {reserva.opciones_adicionales},  Importe: {reserva.importe_abonado}, Restante:{reserva.precio - reserva.importe_abonado} Pagada: {reserva.pagada}"
                 self.lista_reservas.insert(tk.END, reserva_info)
         else:
-            # No hay reservas para esta fecha
             self.lista_reservas.insert(tk.END, "No hay reservas para esta fecha.")
+
+    def abrir_dialogo_reserva(self, event):
+        seleccion = self.lista_reservas.curselection()
+        if not seleccion:
+            return
+        
+        # Obtiene el ID de la reserva seleccionada. Esto requerirá que ajustes cómo listas las reservas para incluir el ID.
+        reserva_id = self.lista_reservas.get(seleccion[0]).split(',')[0]  # Ajusta según cómo listes las reservas
+        
+        # Ahora, abre el diálogo pasándole el ID de la reserva
+        DialogoGestionReserva(self, reserva_id)

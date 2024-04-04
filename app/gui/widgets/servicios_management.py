@@ -38,7 +38,7 @@ class ServicioManagementWidget(tk.Frame):
         self.scrollbar = ttk.Scrollbar(self.frame_lista)
         self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self.lista_servicios = ttk.Treeview(self.frame_lista, columns=("ID", "Nombre", "Precio"), show="headings", yscrollcommand=self.scrollbar.set)
+        self.lista_servicios = ttk.Treeview(self.frame_lista, columns=("ID", "Nombre", "Precio", "Tipo"), show="headings", yscrollcommand=self.scrollbar.set)
         self.lista_servicios.pack(fill=tk.BOTH, expand=True)
 
         self.scrollbar.config(command=self.lista_servicios.yview)
@@ -48,20 +48,19 @@ class ServicioManagementWidget(tk.Frame):
             self.lista_servicios.column(col, width=120, anchor=tk.CENTER)
 
     def listar_servicios(self):
-        # Limpiamos la lista de servicios primero
         for i in self.lista_servicios.get_children():
             self.lista_servicios.delete(i)
-        # Listamos los servicios de la base de datos
         with Session() as session:
             servicios = session.query(Servicio).filter_by(activo=True).all()
             for servicio in servicios:
-                self.lista_servicios.insert('', 'end', values=(servicio.id, servicio.nombre, servicio.precio))
+                self.lista_servicios.insert('', 'end', values=(servicio.id, servicio.nombre, servicio.precio, servicio.tipo))
 
     def añadir_servicio(self):
-        nombre, precio = abrir_dialogo_servicio(self)
-        if nombre and precio:
+        resultado = abrir_dialogo_servicio(self)  # Ahora retorna nombre, precio y tipo
+        if resultado:
+            nombre, precio, tipo = resultado
             with Session() as session:
-                nuevo_servicio = Servicio(nombre=nombre, precio=precio, activo=True)
+                nuevo_servicio = Servicio(nombre=nombre, precio=precio, tipo=tipo, activo=True)
                 session.add(nuevo_servicio)
                 session.commit()
             self.listar_servicios()
@@ -73,12 +72,15 @@ class ServicioManagementWidget(tk.Frame):
             servicio_id = item['values'][0]
             with Session() as session:
                 servicio = session.query(Servicio).filter_by(id=servicio_id).first()
-                nombre, precio = abrir_dialogo_servicio(self, servicio)
-                if nombre and precio:
+                resultado = abrir_dialogo_servicio(self, servicio)  # Pasa el servicio existente
+                if resultado:
+                    nombre, precio, tipo = resultado
                     servicio.nombre = nombre
                     servicio.precio = precio
+                    servicio.tipo = tipo  # Actualiza el tipo
                     session.commit()
             self.listar_servicios()
+
 
     def eliminar_servicio(self):
         seleccion = self.lista_servicios.selection()

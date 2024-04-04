@@ -80,16 +80,21 @@ class Reserva(Base):
     fecha_reserva = Column(Date, nullable=False)
     fecha_creacion = Column(DateTime, default=datetime.now)
     recepcionista_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
+    servicio_id = Column(Integer, ForeignKey('servicios.id'), nullable=False)
     importe_abonado = Column(Float, nullable=False)
-    opciones_adicionales = Column(String) 
-    pagada = Column(Boolean, default=False) 
-    
-    socio = relationship("app.database.models.Socio")
-    recepcionista = relationship("app.database.models.Usuario")
+    precio = Column(Float, nullable=False)
+    opciones_adicionales = Column(String)
+    pagada = Column(Boolean, default=False)
+
+    # Relaciones
+    socio = relationship("Socio")
+    recepcionista = relationship("Usuario")
+    servicio = relationship("Servicio", backref="reservas") 
 
 class Servicio(Base):
     __tablename__ = 'servicios'
     id = Column(Integer, primary_key=True)
     nombre = Column(String, nullable=False)
     precio = Column(Float, nullable=False)
+    tipo = Column(String, nullable=False)
     activo = Column(Boolean, default=True)
