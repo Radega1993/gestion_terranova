@@ -85,6 +85,7 @@ class Reserva(Base):
     precio = Column(Float, nullable=False)
     opciones_adicionales = Column(String)
     pagada = Column(Boolean, default=False)
+    en_lista_de_espera = Column(Boolean, default=False)
 
     # Relaciones
     socio = relationship("Socio")

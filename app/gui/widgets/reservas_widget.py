@@ -6,6 +6,7 @@ from tkcalendar import Calendar
 from app.database.connection import Session
 from app.database.models import Reserva, Servicio, Socio
 from app.gui.widgets.gestion_reservas_dialog import DialogoGestionReserva
+from app.logic.EstadoApp import EstadoApp
 from app.logic.reservations import obtener_fechas_reservadas
 
 class ReservasWidget(tk.Frame):
@@ -75,7 +76,9 @@ class ReservasWidget(tk.Frame):
         socio_id = self.socio_id_entry.get().strip()
         servicio_seleccionado = self.servicio_var.get()
         precio_base = self.servicios[servicio_seleccionado]
-        importe_abonado = float(self.importe_abonado_entry.get().strip())
+        importe_abonado_str = self.importe_abonado_entry.get().strip()
+        importe_abonado = float(importe_abonado_str) if importe_abonado_str else 0
+        trabajador_id = EstadoApp.get_usuario_logueado_id()
 
         # Verificar la existencia del socio
         socio = self.session.query(Socio).filter_by(id=socio_id).first()
@@ -102,27 +105,42 @@ class ReservasWidget(tk.Frame):
             if servicio is None:
                 messagebox.showerror("Error", "Servicio seleccionado no válido.")
                 return
+            
+            reserva_existente = session.query(Reserva).filter_by(fecha_reserva=fecha_reserva, servicio_id=servicio.id, en_lista_de_espera=False).first()
 
+            if reserva_existente:
+                respuesta = messagebox.askyesno("Lista de espera", "Este servicio ya está reservado para este día. ¿Quieres ser añadido a la lista de espera?")
+                if not respuesta:
+                    return
+                en_lista_de_espera = True
+            else:
+                en_lista_de_espera = False
+            
+            en_lista_de_espera = bool(reserva_existente)
+            
+            if not en_lista_de_espera and not (precio_total / 2 <= importe_abonado <= precio_total):
+                messagebox.showerror("Error de Importe", "El importe abonado debe ser entre el 50% y el 100% del precio total.")
+                return
+            
             nueva_reserva = Reserva(
                 socio_id=socio.id,
                 fecha_reserva=fecha_reserva,
-                recepcionista_id=1,  # Suponiendo que el ID del recepcionista ya esté definido
-                servicio_id=servicio.id,  # Guarda el ID del servicio
+                recepcionista_id=trabajador_id,
+                servicio_id=servicio.id,
                 importe_abonado=importe_abonado,
                 precio=precio_total,
                 opciones_adicionales=opciones_adicionales_str,
-                pagada=importe_abonado == precio_total  # Actualiza según el importe abonado
+                pagada=importe_abonado == precio_total,
+                en_lista_de_espera=en_lista_de_espera,
             )
 
-            if not (precio_total / 2 <= importe_abonado <= precio_total):
-                messagebox.showerror("Error de Importe", "El importe abonado debe ser entre el 50% y el 100% del precio total.")
-                return
             
             session.add(nueva_reserva)
             session.commit()
 
-        messagebox.showinfo("Reserva Confirmada", f"La reserva ha sido confirmada para el {fecha_reserva}.")
-        self.cargar_reservas_existentes()
+            estado_reserva = "en lista de espera" if en_lista_de_espera else "confirmada"
+            messagebox.showinfo("Reserva " + estado_reserva, f"La reserva ha sido {estado_reserva} para el {fecha_reserva}.")
+            self.cargar_reservas_existentes()
 
     def cargar_servicios_suplementos(self):
         with self.session as session:
@@ -185,7 +203,8 @@ class ReservasWidget(tk.Frame):
 
         if reservas_dia:
             for reserva, nombre_socio, nombre_servicio in reservas_dia:
-                reserva_info = f"ID: {reserva.id}, Socio: {nombre_socio}, Servicio: {nombre_servicio}, Adicionales: {reserva.opciones_adicionales},  Importe: {reserva.importe_abonado}, Restante:{reserva.precio - reserva.importe_abonado} Pagada: {reserva.pagada}"
+                estado_reserva = "En lista de espera" if reserva.en_lista_de_espera else "Confirmada"
+                reserva_info = f"ID: {reserva.id}, Socio: {nombre_socio}, Servicio: {nombre_servicio}, Adicionales: {reserva.opciones_adicionales}, Importe: {reserva.importe_abonado}, Restante:{reserva.precio - reserva.importe_abonado}, Pagada: {reserva.pagada}, Estado: {estado_reserva}"
                 self.lista_reservas.insert(tk.END, reserva_info)
         else:
             self.lista_reservas.insert(tk.END, "No hay reservas para esta fecha.")

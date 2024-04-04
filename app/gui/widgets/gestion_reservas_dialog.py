@@ -38,12 +38,24 @@ class DialogoGestionReserva(tk.Toplevel):
                 self.destroy()
 
     def eliminar_reserva(self):
-        # Implementa la lógica para eliminar la reserva
         respuesta = messagebox.askyesno("Confirmar eliminación", "¿Estás seguro de que quieres eliminar esta reserva?")
         if respuesta:
             with Session() as session:
-                reserva = session.query(Reserva).filter_by(id=self.reserva_id).delete()
+                reserva_a_eliminar = session.query(Reserva).filter_by(id=self.reserva_id).first()
+                servicio_id = reserva_a_eliminar.servicio_id
+                fecha_reserva = reserva_a_eliminar.fecha_reserva
+                session.delete(reserva_a_eliminar)
                 session.commit()
+
+                # Comprueba si hay reservas en lista de espera para el mismo servicio y día
+                reserva_en_lista_de_espera = session.query(Reserva).filter_by(servicio_id=servicio_id, fecha_reserva=fecha_reserva, en_lista_de_espera=True).order_by(Reserva.fecha_creacion).first()
+                if reserva_en_lista_de_espera:
+                    reserva_en_lista_de_espera.en_lista_de_espera = False
+                    session.commit()
+                    # Notifica al usuario que su reserva ha sido confirmada
+                    messagebox.showinfo("Lista de espera", "Una reserva en lista de espera ha sido confirmada.")
+
                 messagebox.showinfo("Reserva eliminada", "La reserva ha sido eliminada correctamente.")
                 self.parent.cargar_reservas_existentes()
                 self.destroy()
+
