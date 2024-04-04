@@ -6,11 +6,11 @@ from app.database.models import Reserva
 
 
 class DialogoGestionReserva(tk.Toplevel):
-    def __init__(self, parent, reserva_id):
+    def __init__(self, parent, reserva_id_str):
         super().__init__(parent)
-        self.reserva_id = reserva_id
+        self.reserva_id = int(reserva_id_str.split(': ')[1])
         self.parent = parent
-
+        
         self.title("Gestionar Reserva")
         self.geometry("300x200")
 
@@ -29,7 +29,7 @@ class DialogoGestionReserva(tk.Toplevel):
         # Implementa la lógica para finalizar el pago
         with Session() as session:
             reserva = session.query(Reserva).filter_by(id=self.reserva_id).first()
-            if reserva:
+            if reserva and reserva.pagada == False:
                 reserva.importe_abonado = reserva.precio
                 reserva.pagada = True
                 session.commit()

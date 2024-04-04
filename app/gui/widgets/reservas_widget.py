@@ -150,12 +150,23 @@ class ReservasWidget(tk.Frame):
         self.precio_servicio_label.config(text=f"Precio total: {precio_total}€")
 
     def cargar_reservas_existentes(self):
+        # Limpia cualquier evento existente en el calendario
+        for eid in self.calendario.get_calevents():
+            self.calendario.calevent_remove(eid)
+        
+        with Session() as session:
+            reservas = session.query(Reserva.fecha_reserva).distinct().all()
+
+        #fechas_reservadas = [reserva.fecha_reserva for reserva in reservas]
+
         fechas_reservadas = obtener_fechas_reservadas(self.session)
         for fecha in fechas_reservadas:
             # Convertir las fechas al formato esperado por tkcalendar si es necesario
             fecha_codificada = datetime.strptime(fecha, '%Y-%m-%d').date()
             self.calendario.calevent_create(fecha_codificada, 'Reservado', 'reserva')
             self.calendario.tag_config('reserva', background='red', foreground='white')
+        
+        self.mostrar_reservas_dia()
 
     def mostrar_reservas_dia(self, event=None):
         fecha_seleccionada = self.calendario.get_date()
