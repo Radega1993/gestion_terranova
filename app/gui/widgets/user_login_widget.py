@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import messagebox
 from app.database.connection import Session
 from app.database.models import Usuario
-from app.logic.users import crear_usuario, obtener_usuario_por_correo
+from app.logic.users import crear_usuario
 from werkzeug.security import check_password_hash
 from app.logic.EstadoApp import EstadoApp 
 
@@ -37,16 +37,16 @@ class UserLoginWidget(tk.Frame):
         login_frame.grid(padx=100, pady=60, sticky="nsew")
 
         # Crear y configurar widgets aquí antes de posicionarlos
-        self.lbl_email_login = self.create_widgets_common_style(tk.Label(login_frame, text="Correo electrónico:"))
-        self.email_login_entry = tk.Entry(login_frame)
+        self.lbl_user_login = self.create_widgets_common_style(tk.Label(login_frame, text="Usuario:"))
+        self.user_login_entry = tk.Entry(login_frame)
         self.lbl_password_login = self.create_widgets_common_style(tk.Label(login_frame, text="Contraseña:"))
         self.password_login_entry = tk.Entry(login_frame, show="*")
         self.login_button = self.create_widgets_common_style(tk.Button(login_frame, text="Iniciar sesión", command=self.login))
         self.register_screen_button = self.create_widgets_common_style(tk.Button(login_frame, text="Registrarse", command=self.show_register_widgets))
 
         # Posicionamiento con .grid() para un layout más preciso
-        self.lbl_email_login.grid(row=0, column=0, sticky="w", padx=10, pady=10)
-        self.email_login_entry.grid(row=0, column=1, pady=10, padx=10, sticky="ew")
+        self.lbl_user_login.grid(row=0, column=0, sticky="w", padx=10, pady=10)
+        self.user_login_entry.grid(row=0, column=1, pady=10, padx=10, sticky="ew")
         self.lbl_password_login.grid(row=1, column=0, sticky="w", padx=10, pady=10)
         self.password_login_entry.grid(row=1, column=1, pady=10, padx=10, sticky="ew")
         self.login_button.grid(row=2, column=0, columnspan=2, pady=20, padx=10, sticky="ew")
@@ -62,8 +62,8 @@ class UserLoginWidget(tk.Frame):
  
         self.lbl_nombre_register = self.create_widgets_common_style(tk.Label(register_frame, text="Nombre completo:"))
         self.nombre_register_entry = tk.Entry(register_frame, bg="white")
-        self.lbl_email_register = self.create_widgets_common_style(tk.Label(register_frame, text="Correo electrónico:"))
-        self.email_register_entry = tk.Entry(register_frame, bg="white")
+        self.lbl_user_register = self.create_widgets_common_style(tk.Label(register_frame, text="Usuario:"))
+        self.user_register_entry = tk.Entry(register_frame, bg="white")
         self.lbl_password_register = self.create_widgets_common_style(tk.Label(register_frame, text="Contraseña:"))
         self.password_register_entry = tk.Entry(register_frame, show="*", bg="white")
         self.register_button = self.create_widgets_common_style(tk.Button(register_frame, text="Registrar", command=self.register))
@@ -71,8 +71,8 @@ class UserLoginWidget(tk.Frame):
 
         self.lbl_nombre_register.grid(in_=register_frame, row=0, column=0, sticky="w", padx=10, pady=5)
         self.nombre_register_entry.grid(in_=register_frame, row=0, column=1, sticky="ew", padx=10, pady=5)
-        self.lbl_email_register.grid(in_=register_frame, row=1, column=0, sticky="w", padx=10, pady=5)
-        self.email_register_entry.grid(in_=register_frame, row=1, column=1, sticky="ew", padx=10, pady=5)
+        self.lbl_user_register.grid(in_=register_frame, row=1, column=0, sticky="w", padx=10, pady=5)
+        self.user_register_entry.grid(in_=register_frame, row=1, column=1, sticky="ew", padx=10, pady=5)
         self.lbl_password_register.grid(in_=register_frame, row=2, column=0, sticky="w", padx=10, pady=5)
         self.password_register_entry.grid(in_=register_frame, row=2, column=1, sticky="ew", padx=10, pady=5)
         self.register_button.grid(in_=register_frame, row=3, column=0, columnspan=2, sticky="ew", padx=10, pady=10)
@@ -90,10 +90,10 @@ class UserLoginWidget(tk.Frame):
         self.create_register_widgets()
 
     def login(self):
-        email = self.email_login_entry.get()
+        user = self.user_login_entry.get()
         password = self.password_login_entry.get()
         with Session() as session:
-            usuario = session.query(Usuario).filter_by(correo_electronico=email).first()
+            usuario = session.query(Usuario).filter_by(user=user).first()
             if usuario and check_password_hash(usuario.contrasena_hash, password):
                 EstadoApp.set_usuario_logueado_id(usuario.id)
                 self.login_success_callback(usuario)
@@ -103,11 +103,11 @@ class UserLoginWidget(tk.Frame):
 
     def register(self):
         nombre = self.nombre_register_entry.get()
-        email = self.email_register_entry.get()
+        user = self.user_register_entry.get()
         password = self.password_register_entry.get()
-        if nombre and email and password:
+        if nombre and user and password:
             try:
-                crear_usuario(nombre, email, "cliente", password)  # Asume que ya tienes esta función
+                crear_usuario(nombre, user, "cliente", password)  # Asume que ya tienes esta función
                 messagebox.showinfo("Registro", "Usuario registrado con éxito. Por favor, inicia sesión.")
                 self.show_login_widgets()
             except Exception as e:

@@ -35,10 +35,11 @@ class Usuario(Base):
     __tablename__ = 'usuarios'
     id = Column(Integer, primary_key=True)
     nombre = Column(String, nullable=False)
-    correo_electronico = Column(String, unique=True, nullable=False)
+    user = Column(String, unique=True, nullable=False)
     tipo_usuario = Column(String, nullable=False)
     contrasena_hash = Column(String, nullable=False)
-
+    activo = Column(Boolean, default=True) 
+    
     def set_password(self, password):
         self.contrasena_hash = generate_password_hash(password)
 

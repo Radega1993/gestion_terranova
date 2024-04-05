@@ -39,7 +39,7 @@ class RegistrationForm(tk.Toplevel):
 
         if nombre and email and password:
             try:
-                crear_usuario(nombre, email, "cliente", password)  # Asumiendo tipo_usuario como "cliente"
+                crear_usuario(nombre, email, "Trabajador", password)
                 messagebox.showinfo("Registro", "Usuario registrado con éxito. Por favor, inicia sesión.")
                 self.destroy()  # Cierra la ventana de registro tras el éxito
             except Exception as e:
