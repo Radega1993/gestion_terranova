@@ -5,6 +5,7 @@ import logging
 
 # Importaciones de los widgets que necesitas
 from app.gui.widgets.deber_management_widget import DeudasWidget
+from app.gui.widgets.recaudaciones_management import RecaudacionesManagementWidget
 from app.gui.widgets.servicios_management import ServicioManagementWidget
 from app.gui.widgets.user_login_widget import UserLoginWidget
 from app.gui.widgets.user_management_widget import UserManagementWidget
@@ -89,6 +90,12 @@ class MainWindow(tk.Tk):
         self.tab_control.add(self.servicios_management_tab, text="Gestión de Servicios")
         self.servicios_management_widget = ServicioManagementWidget(self.servicios_management_tab)
         self.servicios_management_widget.pack(expand=True, fill='both')
+        
+        # Pestaña de gestión de servicios
+        self.recaudaciones_management_tab = tk.Frame(self.tab_control)
+        self.tab_control.add(self.recaudaciones_management_tab, text="Recaudaciones")
+        self.recaudaciones_management_widget = RecaudacionesManagementWidget(self.recaudaciones_management_tab)
+        self.recaudaciones_management_widget.pack(expand=True, fill='both')
 
         self.tab_control.bind("<<NotebookTabChanged>>", self.on_tab_change)
         self.tab_control.add(self.user_management_tab, text="Gestión de Clientes")
@@ -97,7 +104,8 @@ class MainWindow(tk.Tk):
         self.tab_control.add(self.deber_tab, text="Deber")
         self.tab_control.add(self.product_management_tab, text="Gestión de Productos")
         self.tab_control.add(self.reservas_management_tab, text="Gestión de Reservas")
-        self.tab_control.add(self.reservas_management_tab, text="Gestión de Reservas")
+        self.tab_control.add(self.servicios_management_tab, text="Gestión de Servicios")
+        self.tab_control.add(self.recaudaciones_management_tab, text="Recaudaciones")
 
 
     def create_logout_option(self):
@@ -143,6 +151,12 @@ class MainWindow(tk.Tk):
         # Gestión de Reservas
         elif tab_frame == self.reservas_management_tab:
             self.reservas_management_widget = self.construir_widget_en_tab(tab_frame, ReservasWidget)
+            # Gestión de Reservas
+        elif tab_frame == self.servicios_management_tab:
+            self.servicios_management_widget = self.construir_widget_en_tab(tab_frame, ServicioManagementWidget)
+            # Gestión de Reservas
+        elif tab_frame == self.reservas_management_tab:
+            self.reservas_management_widget = self.construir_widget_en_tab(tab_frame, RecaudacionesManagementWidget)
 
 if __name__ == "__main__":
     app = MainWindow()
