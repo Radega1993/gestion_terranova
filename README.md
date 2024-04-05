@@ -23,3 +23,9 @@ pip install -r requirements.txt
 ```bash
 python -m app.gui.main_window
 ```
+
+
+compilar release
+```bash
+pyinstaller --onefile --windowed --name "GestionTerranova" app/main.py
+```
