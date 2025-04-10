@@ -1,0 +1,36 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Gestion Terranova
+
+Estamos desarrollando una aplicación tipo TPV para gestionar una asociacion de vecinos.
+
+Para ello tenemos una pantalla principal con pestañas para cada parte del programa.
+
+Las partes que tendra la aplicación son:
+- Deudas
+- Reservas
+- Sales
+- Socios
+- Stock
+- Usuario
+
+Tengo que tener un sistema de roles de usuarios:
+- Administrador
+- Trabajador
+- Junta
+
+Nuestra aplicación tiene que funcionar sin llamadas a internet puesto que por norma general el ordenador donde va a funcionar no tendra conección.
+
+## Tecnologías
+
+Estas son las tecnologias que vamos a utilizar
+- Tkinter como GUI
+- Python3 como lenguaje de programación
+- SQLi como base de datos
+
+## Testing
+
+Todas las funcionalidades de la app tienen que tener sus unit test

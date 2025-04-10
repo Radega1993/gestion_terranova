@@ -1,7 +1,7 @@
 # Modelos de la base de datos (tablas, relaciones)
 
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, ForeignKey, Float, Date, Boolean, String, DateTime
+from sqlalchemy import Column, Integer, ForeignKey, Float, Date, Boolean, String, DateTime, Text, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, sessionmaker
 from werkzeug.security import generate_password_hash
@@ -27,9 +27,9 @@ class Venta(Base):
     pagada = Column(Boolean, default=True)  # Por defecto True, suponiendo que la mayoría de ventas se pagan al momento
 
     # Relaciones
-    socio = relationship("app.database.models.Socio", backref="ventas")  # Permite acceder a las ventas desde el socio
-    trabajador = relationship("app.database.models.Usuario", backref="ventas_realizadas")  # Permite acceder a las ventas realizadas por el trabajador
-    detalles = relationship("app.database.models.DetalleVenta", backref="venta")
+    socio = relationship("Socio", back_populates="ventas")
+    trabajador = relationship("Usuario", backref="ventas_realizadas")
+    detalles = relationship("DetalleVenta", back_populates="venta")
 
 class Usuario(Base):
     __tablename__ = 'usuarios'
@@ -45,11 +45,60 @@ class Usuario(Base):
 
 class Socio(Base):
     __tablename__ = 'socios'
+    
     id = Column(Integer, primary_key=True)
-    nombre = Column(String, nullable=False)
-    correo_electronico = Column(String, nullable=False, unique=True)
-    fecha_inscripcion = Column(Date, default=datetime.now(timezone.utc))
+    rgpd = Column(Boolean, default=False)
+    codigo_socio = Column(String(10))
+    canvi = Column(String(50))
+    casa = Column(Integer)
+    total_soc = Column(Integer)
+    num_pers = Column(Integer)
+    adherits = Column(Integer)
+    menor_3_anys = Column(Integer)
+    cuota = Column(Float)
+    dni = Column(String(9))
+    nombre = Column(String(100))
+    primer_apellido = Column(String(100))
+    segundo_apellido = Column(String(100))
+    direccion = Column(String(200))
+    poblacion = Column(String(100))
+    codigo_postal = Column(String(5))
+    provincia = Column(String(100))
+    iban = Column(String(4))
+    entidad = Column(String(4))
+    oficina = Column(String(4))
+    dc = Column(String(2))
+    cuenta_corriente = Column(String(10))
+    telefono = Column(String(15))
+    telefono2 = Column(String(15))
+    email = Column(String(100))
+    email2 = Column(String(100))
+    observaciones = Column(Text)
+    fecha_nacimiento = Column(Date)
+    fecha_registro = Column(DateTime, default=datetime.now)
     activo = Column(Boolean, default=True)
+    es_principal = Column(Boolean, default=True)
+    socio_principal_id = Column(Integer, ForeignKey('socios.id'), nullable=True)
+    foto_path = Column(String(255), nullable=True)
+    
+    # Relaciones
+    socio_principal = relationship('Socio', remote_side=[id], backref='miembros_familia')
+    deudas = relationship('Deuda', back_populates='socio')
+    ventas = relationship('Venta', back_populates='socio')
+    reservas = relationship('Reserva', back_populates='socio')
+    
+    # Campos para miembros de familia
+    miembros = relationship('MiembroFamilia', 
+                          back_populates='socio_principal',
+                          foreign_keys='[MiembroFamilia.socio_principal_id]')
+    
+    def __repr__(self):
+        return f"<Socio {self.nombre} {self.primer_apellido} {self.segundo_apellido}>"
+    
+    __table_args__ = (
+        # Añadimos el UNIQUE constraint aquí
+        UniqueConstraint('codigo_socio', name='uq_socio_codigo'),
+    )
 
 class Deuda(Base):
     __tablename__ = 'deudas'
@@ -60,9 +109,9 @@ class Deuda(Base):
     trabajador_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
     pagada = Column(Boolean, default=False)
 
-    socio = relationship("app.database.models.Socio", backref="deudas")
-    trabajador = relationship("app.database.models.Usuario")
-    detalles_venta = relationship("app.database.models.DetalleVenta", backref="deuda")
+    socio = relationship("Socio", back_populates="deudas")
+    trabajador = relationship("Usuario")
+    detalles_venta = relationship("DetalleVenta", back_populates="deuda")
 
 class DetalleVenta(Base):
     __tablename__ = 'detalles_venta'
@@ -71,8 +120,12 @@ class DetalleVenta(Base):
     producto_id = Column(Integer, ForeignKey('productos.id'), nullable=False)
     cantidad = Column(Integer, nullable=False)
     precio = Column(Float, nullable=False)
-    producto = relationship("app.database.models.Producto")
     deuda_id = Column(Integer, ForeignKey('deudas.id'))
+    
+    # Relaciones
+    venta = relationship("Venta", back_populates="detalles")
+    producto = relationship("Producto")
+    deuda = relationship("Deuda", back_populates="detalles_venta")
 
 class Reserva(Base):
     __tablename__ = 'reservas'
@@ -100,3 +153,18 @@ class Servicio(Base):
     precio = Column(Float, nullable=False)
     tipo = Column(String, nullable=False)
     activo = Column(Boolean, default=True)
+
+class MiembroFamilia(Base):
+    __tablename__ = 'miembros_familia'
+    id = Column(Integer, primary_key=True)
+    socio_principal_id = Column(Integer, ForeignKey('socios.id'), nullable=False)
+    socio_miembro_id = Column(Integer, ForeignKey('socios.id'), nullable=False)
+    fecha_registro = Column(DateTime, default=datetime.now)
+    activo = Column(Boolean, default=True)
+    
+    # Relaciones
+    socio_principal = relationship("Socio", 
+                                 foreign_keys=[socio_principal_id],
+                                 back_populates="miembros")
+    socio_miembro = relationship("Socio", 
+                               foreign_keys=[socio_miembro_id])
