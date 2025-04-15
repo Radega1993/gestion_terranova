@@ -49,27 +49,88 @@ def procesar_deuda(session, socio_id, detalles_venta, total_venta, trabajador_id
             pagada=False
         )
         session.add(nueva_deuda)
-        session.flush()  # Para obtener el ID de la nueva deuda antes de hacer commit
+        session.flush()  # Para obtener el ID de la deuda antes de commit
 
+        # Crear los detalles de venta asociados a la deuda
         for detalle in detalles_venta:
-            producto = session.query(Producto).filter_by(id=detalle['producto_id']).first()
-            if producto:
-                detalle_venta = DetalleVenta(
-                    deuda_id=nueva_deuda.id,
-                    producto_id=detalle['producto_id'],
-                    cantidad=detalle['cantidad'],
-                    precio=producto.precio  # Utiliza el precio del modelo Producto
-                )
-                session.add(detalle_venta)
-            else:
-                raise ValueError(f"Producto con ID {detalle['producto_id']} no encontrado.")
-
-        # No hacemos session.commit() aquí para permitir que la transacción se maneje externamente
+            producto_id = detalle["producto_id"]
+            cantidad = detalle["cantidad"]
+            
+            # Obtener el precio del producto
+            producto = session.query(Producto).filter_by(id=producto_id).first()
+            if not producto:
+                raise ValueError(f"Producto con ID {producto_id} no encontrado")
+                
+            precio = producto.precio
+            
+            # Crear el detalle de venta
+            nuevo_detalle = DetalleVenta(
+                producto_id=producto_id,
+                cantidad=cantidad,
+                precio=precio,
+                venta_id=None  # No está asociado a una venta, sino a una deuda
+            )
+            session.add(nuevo_detalle)
+            
+        session.commit()
         return nueva_deuda.id
-
     except SQLAlchemyError as e:
         session.rollback()
-        raise e
+        raise Exception(f"Error al procesar la deuda: {str(e)}")
+
+def procesar_pago_parcial(session, deuda_id, cantidad_pagada, trabajador_id):
+    """
+    Procesa un pago parcial de una deuda.
+    
+    Args:
+        session: La sesión de SQLAlchemy para realizar las operaciones de base de datos.
+        deuda_id: El ID de la deuda a pagar parcialmente.
+        cantidad_pagada: La cantidad que se va a pagar.
+        trabajador_id: El ID del trabajador (usuario) que procesa el pago.
+        
+    Returns:
+        El ID de la nueva deuda creada con el monto restante, o None si se pagó la deuda completa.
+    """
+    try:
+        # Obtener la deuda
+        deuda = session.query(Deuda).filter_by(id=deuda_id).first()
+        if not deuda:
+            raise ValueError(f"Deuda con ID {deuda_id} no encontrada")
+            
+        if deuda.pagada:
+            raise ValueError(f"La deuda con ID {deuda_id} ya está pagada")
+            
+        # Verificar que la cantidad pagada no sea mayor que el total de la deuda
+        if cantidad_pagada > deuda.total:
+            raise ValueError(f"La cantidad pagada ({cantidad_pagada}) no puede ser mayor que el total de la deuda ({deuda.total})")
+            
+        # Si se paga la deuda completa
+        if cantidad_pagada == deuda.total:
+            deuda.pagada = True
+            session.commit()
+            return None
+            
+        # Si es un pago parcial, crear una nueva deuda con el monto restante
+        monto_restante = deuda.total - cantidad_pagada
+        nueva_deuda = Deuda(
+            socio_id=deuda.socio_id,
+            fecha=datetime.now(timezone.utc),
+            total=monto_restante,
+            trabajador_id=trabajador_id,
+            pagada=False
+        )
+        session.add(nueva_deuda)
+        session.flush()
+        
+        # Actualizar la deuda original con el monto pagado
+        deuda.total = cantidad_pagada
+        deuda.pagada = True
+        
+        session.commit()
+        return nueva_deuda.id
+    except SQLAlchemyError as e:
+        session.rollback()
+        raise Exception(f"Error al procesar el pago parcial: {str(e)}")
 
 def obtener_deudas_agrupadas():
     with Session() as session:

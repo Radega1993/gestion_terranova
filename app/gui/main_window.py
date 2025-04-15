@@ -67,7 +67,7 @@ class MainWindow(tk.Tk):
 
         # Pestaña de cobros en el bar
         self.bar_cobros_tab = tk.Frame(self.tab_control)
-        self.tab_control.add(self.bar_cobros_tab, text="Cobros")
+        self.tab_control.add(self.bar_cobros_tab, text="Bar")
         self.bar_cobros_widget = BarCobrosWidget(self.bar_cobros_tab)
         self.bar_cobros_widget.pack(expand=True, fill='both')
 
@@ -104,7 +104,7 @@ class MainWindow(tk.Tk):
         self.tab_control.bind("<<NotebookTabChanged>>", self.on_tab_change)
         self.tab_control.add(self.user_management_tab, text="Gestión de Clientes")
         self.tab_control.add(self.socio_manager_tab, text="Gestión de Socios")
-        self.tab_control.add(self.bar_cobros_tab, text="Cobros")
+        self.tab_control.add(self.bar_cobros_tab, text="Bar")
         self.tab_control.add(self.deber_tab, text="Deber")
         self.tab_control.add(self.product_management_tab, text="Gestión de Productos")
         self.tab_control.add(self.reservas_management_tab, text="Gestión de Reservas")

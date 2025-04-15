@@ -168,12 +168,9 @@ class SocioManagementWidget(tk.Frame):
         # Obtener socios principales
         socios_principales = obtener_socios_principales()
         
-        # Imprimir para depuración
-        print(f"Socios principales encontrados: {len(socios_principales)}")
         
         # Insertar socios principales
         for socio in socios_principales:
-            print(f"Procesando socio principal: {socio.nombre} (ID: {socio.id})")
             
             # Insertar socio principal
             principal_id = self.lista_socios.insert("", tk.END, values=(
@@ -187,7 +184,6 @@ class SocioManagementWidget(tk.Frame):
             # Obtener y insertar miembros de la familia
             miembros = obtener_miembros_familia(socio.id)
             for miembro in miembros:
-                print(f"  Insertando miembro: {miembro.nombre} (ID: {miembro.id})")
                 self.lista_socios.insert(principal_id, tk.END, values=(
                     miembro.id,
                     miembro.codigo_socio,
@@ -324,7 +320,7 @@ class SocioManagementWidget(tk.Frame):
         if confirmacion:
             desactivar_socio(self.selected_socio.id)
             self.listar_socios()
-            
+
     def activar_socio_seleccionado(self):
         if not self.selected_socio:
             messagebox.showwarning("Advertencia", "Por favor, seleccione un socio para activar")

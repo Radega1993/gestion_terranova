@@ -1,7 +1,7 @@
 # En logic/socios.py
 from app.database.connection import Session
 from app.database.models import Socio, MiembroFamilia
-from sqlalchemy import and_
+from sqlalchemy import and_, or_
 
 def crear_socio(
     nombre, primer_apellido, segundo_apellido, dni=None, codigo_socio=None,
@@ -200,3 +200,32 @@ def actualizar_socio(
             socio.foto_path = foto_path
             
         session.commit()
+
+def buscar_socios(session, termino):
+    """
+    Busca socios por nombre o email.
+    
+    Args:
+        session: Sesión de SQLAlchemy
+        termino: Término de búsqueda (nombre o email)
+        
+    Returns:
+        Lista de socios que coinciden con el término de búsqueda
+    """
+    # Convertir el término a minúsculas para hacer la búsqueda insensible a mayúsculas/minúsculas
+    termino = termino.lower()
+    
+    # Buscar socios que coincidan con el término en nombre o email
+    socios = session.query(Socio).filter(
+        and_(
+            Socio.activo == True,
+            or_(
+                Socio.nombre.ilike(f"%{termino}%"),
+                Socio.email.ilike(f"%{termino}%"),
+                Socio.primer_apellido.ilike(f"%{termino}%"),
+                Socio.segundo_apellido.ilike(f"%{termino}%")
+            )
+        )
+    ).all()
+    
+    return socios

@@ -21,7 +21,7 @@ def test_create_socio_principal(session):
     # Crear un socio principal
     socio = Socio(
         nombre="Juan Pérez",
-        correo_electronico="juan@example.com",
+        email="juan@example.com",
         es_principal=True
     )
     session.add(socio)
@@ -35,7 +35,7 @@ def test_create_socio_miembro(session):
     # Crear un socio principal
     principal = Socio(
         nombre="Juan Pérez",
-        correo_electronico="juan@example.com",
+        email="juan@example.com",
         es_principal=True
     )
     session.add(principal)
@@ -44,7 +44,7 @@ def test_create_socio_miembro(session):
     # Crear un miembro de la familia
     miembro = Socio(
         nombre="María Pérez",
-        correo_electronico="maria@example.com",
+        email="maria@example.com",
         es_principal=False,
         socio_principal_id=principal.id
     )
@@ -59,7 +59,7 @@ def test_familia_relationship(session):
     # Crear un socio principal
     principal = Socio(
         nombre="Juan Pérez",
-        correo_electronico="juan@example.com",
+        email="juan@example.com",
         es_principal=True
     )
     session.add(principal)
@@ -69,7 +69,7 @@ def test_familia_relationship(session):
     miembros = [
         Socio(
             nombre=f"Miembro {i}",
-            correo_electronico=f"miembro{i}@example.com",
+            email=f"miembro{i}@example.com",
             es_principal=False,
             socio_principal_id=principal.id
         )
@@ -87,7 +87,7 @@ def test_miembro_familia_model(session):
     # Crear un socio principal
     principal = Socio(
         nombre="Juan Pérez",
-        correo_electronico="juan@example.com",
+        email="juan@example.com",
         es_principal=True
     )
     session.add(principal)
@@ -96,22 +96,23 @@ def test_miembro_familia_model(session):
     # Crear un miembro
     miembro = Socio(
         nombre="María Pérez",
-        correo_electronico="maria@example.com",
+        email="maria@example.com",
         es_principal=False
     )
     session.add(miembro)
     session.commit()
     
-    # Crear la relación en la tabla miembros_familia
-    relacion = MiembroFamilia(
+    # Crear la relación de miembro de familia
+    miembro_familia = MiembroFamilia(
         socio_principal_id=principal.id,
         socio_miembro_id=miembro.id
     )
-    session.add(relacion)
+    session.add(miembro_familia)
     session.commit()
     
-    assert relacion.id is not None
-    assert relacion.socio_principal_id == principal.id
-    assert relacion.socio_miembro_id == miembro.id
-    assert relacion.activo is True
-    assert isinstance(relacion.fecha_registro, datetime) 
+    # Verificar la relación
+    assert miembro_familia.id is not None
+    assert miembro_familia.socio_principal_id == principal.id
+    assert miembro_familia.socio_miembro_id == miembro.id
+    assert miembro_familia.activo is True
+    assert isinstance(miembro_familia.fecha_registro, datetime) 

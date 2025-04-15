@@ -25,6 +25,7 @@ class Venta(Base):
     socio_id = Column(Integer, ForeignKey('socios.id'), nullable=True)  # Puede ser nullable si no todas las ventas son a socios
     trabajador_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
     pagada = Column(Boolean, default=True)  # Por defecto True, suponiendo que la mayoría de ventas se pagan al momento
+    metodo_pago = Column(String(20), nullable=False, default='efectivo')  # 'efectivo' o 'tarjeta'
 
     # Relaciones
     socio = relationship("Socio", back_populates="ventas")
@@ -39,6 +40,9 @@ class Usuario(Base):
     tipo_usuario = Column(String, nullable=False)
     contrasena_hash = Column(String, nullable=False)
     activo = Column(Boolean, default=True) 
+    
+    # Relaciones
+    deudas_procesadas = relationship("Deuda", back_populates="trabajador")
     
     def set_password(self, password):
         self.contrasena_hash = generate_password_hash(password)
@@ -102,16 +106,23 @@ class Socio(Base):
 
 class Deuda(Base):
     __tablename__ = 'deudas'
+    
     id = Column(Integer, primary_key=True)
     socio_id = Column(Integer, ForeignKey('socios.id'), nullable=False)
-    fecha = Column(Date, default=datetime.now(timezone.utc))
+    fecha = Column(Date, nullable=False)
     total = Column(Float, nullable=False)
     trabajador_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
     pagada = Column(Boolean, default=False)
-
+    pagada_parcialmente = Column(Boolean, default=False)
+    metodo_pago = Column(String(50))
+    
     socio = relationship("Socio", back_populates="deudas")
-    trabajador = relationship("Usuario")
+    trabajador = relationship("Usuario", back_populates="deudas_procesadas")
     detalles_venta = relationship("DetalleVenta", back_populates="deuda")
+
+    @property
+    def detalles(self):
+        return self.detalles_venta
 
 class DetalleVenta(Base):
     __tablename__ = 'detalles_venta'
