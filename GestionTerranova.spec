@@ -17,6 +17,17 @@ a = Analysis(
         'babel.plural',
         'babel.messages',
         'babel.core',
+        'babel.locale',
+        'babel.util',
+        'babel.dates',
+        'babel.numbers',
+        'babel.plural',
+        'babel.messages',
+        'babel.calendar',
+        'babel.timezone',
+        'babel.timezone.zoneinfo',
+        'babel.timezone.zoneinfo.zoneinfo',
+        'babel.timezone.zoneinfo.zoneinfo.zoneinfo',
         'sqlalchemy.sql.default_comparator',
         'sqlalchemy.ext.baked',
         'PIL._tkinter_finder',
@@ -30,12 +41,13 @@ a = Analysis(
         'reportlab.graphics.barcode.qr',
         'pkg_resources.py2_warn',
     ],
-    hookspath=[],
+    hookspath=['.'],  # Add current directory to hook path
     hooksconfig={},
     runtime_hooks=[],
     excludes=[],
     noarchive=False,
 )
+
 pyz = PYZ(a.pure)
 
 exe = EXE(
