@@ -20,7 +20,7 @@ class Producto(Base):
 class Venta(Base):
     __tablename__ = 'ventas'
     id = Column(Integer, primary_key=True)
-    fecha = Column(Date, nullable=False, default=datetime.now(timezone.utc))
+    fecha = Column(DateTime, nullable=False, default=datetime.now(timezone.utc))
     total = Column(Float, nullable=False)
     socio_id = Column(Integer, ForeignKey('socios.id'), nullable=True)  # Puede ser nullable si no todas las ventas son a socios
     trabajador_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
@@ -109,7 +109,7 @@ class Deuda(Base):
     
     id = Column(Integer, primary_key=True)
     socio_id = Column(Integer, ForeignKey('socios.id'), nullable=False)
-    fecha = Column(Date, nullable=False)
+    fecha = Column(DateTime, nullable=False)
     total = Column(Float, nullable=False)
     trabajador_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
     pagada = Column(Boolean, default=False)
@@ -142,8 +142,8 @@ class Reserva(Base):
     __tablename__ = 'reservas'
     id = Column(Integer, primary_key=True)
     socio_id = Column(Integer, ForeignKey('socios.id'), nullable=False)
-    fecha_reserva = Column(Date, nullable=False)
-    fecha_creacion = Column(DateTime, default=datetime.now)
+    fecha_reserva = Column(DateTime, nullable=False)
+    fecha_creacion = Column(DateTime, default=datetime.now(timezone.utc))
     recepcionista_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False)
     servicio_id = Column(Integer, ForeignKey('servicios.id'), nullable=False)
     importe_abonado = Column(Float, nullable=False)
