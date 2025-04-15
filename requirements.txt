@@ -28,3 +28,5 @@ tomli==2.0.1
 typing_extensions==4.10.0
 urllib3==2.2.1
 Werkzeug==3.0.1
+qrcode==7.4.2
+python-dateutil==2.8.2
