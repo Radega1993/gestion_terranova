@@ -1,7 +1,9 @@
 # Ventana principal de la aplicación
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox, ttk, filedialog
 import logging
+import shutil
+import os
 
 # Importaciones de los widgets que necesitas
 from app.gui.widgets.deber_management_widget import DeudasWidget
@@ -113,12 +115,77 @@ class MainWindow(tk.Tk):
 
 
     def create_logout_option(self):
-        # Agregar una pestaña o botón para cerrar sesión
-        logout_tab = tk.Frame(self.tab_control)
-        logout_button = tk.Button(logout_tab, text="Cerrar sesión", command=self.logout)
+        # Agregar una pestaña para ajustes y cerrar sesión
+        settings_tab = tk.Frame(self.tab_control)
+        
+        # Frame para la gestión de base de datos
+        db_frame = ttk.LabelFrame(settings_tab, text="Gestión de Base de Datos")
+        db_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        export_button = ttk.Button(db_frame, text="Exportar Base de Datos", command=self.export_database)
+        export_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+        import_button = ttk.Button(db_frame, text="Importar Base de Datos", command=self.import_database)
+        import_button.pack(side=tk.LEFT, padx=5, pady=5)
+
+        # Frame para cerrar sesión
+        logout_frame = ttk.LabelFrame(settings_tab, text="Sesión")
+        logout_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        logout_button = ttk.Button(logout_frame, text="Cerrar sesión", command=self.logout)
         logout_button.pack(pady=10)
 
-        self.tab_control.add(logout_tab, text="Opciones Usuario")
+        self.tab_control.add(settings_tab, text="Ajustes")
+
+    def export_database(self):
+        """Exporta la base de datos a un archivo .db"""
+        try:
+            # Preguntar al usuario dónde guardar el archivo
+            file_path = filedialog.asksaveasfilename(
+                defaultextension=".db",
+                filetypes=[("SQLite Database", "*.db")],
+                initialfile="gestion_terranova_backup.db"
+            )
+            
+            if file_path:
+                # Copiar el archivo de la base de datos
+                shutil.copy2(DATABASE_PATH, file_path)
+                messagebox.showinfo("Éxito", "Base de datos exportada correctamente")
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al exportar la base de datos: {str(e)}")
+
+    def import_database(self):
+        """Importa una base de datos desde un archivo .db"""
+        try:
+            # Preguntar al usuario qué archivo importar
+            file_path = filedialog.askopenfilename(
+                filetypes=[("SQLite Database", "*.db")],
+                title="Seleccionar base de datos a importar"
+            )
+            
+            if file_path:
+                # Confirmar con el usuario
+                if messagebox.askyesno("Confirmar", 
+                    "La importación de una base de datos puede sobrescribir datos existentes. ¿Desea continuar?"):
+                    
+                    # Hacer una copia de seguridad de la base de datos actual
+                    backup_path = DATABASE_PATH + ".backup"
+                    shutil.copy2(DATABASE_PATH, backup_path)
+                    
+                    try:
+                        # Copiar la nueva base de datos
+                        shutil.copy2(file_path, DATABASE_PATH)
+                        messagebox.showinfo("Éxito", "Base de datos importada correctamente")
+                    except Exception as e:
+                        # Si hay error, restaurar la copia de seguridad
+                        shutil.copy2(backup_path, DATABASE_PATH)
+                        raise e
+                    finally:
+                        # Eliminar la copia de seguridad
+                        if os.path.exists(backup_path):
+                            os.remove(backup_path)
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al importar la base de datos: {str(e)}")
     
     def logout(self):
         # Manejar el cierre de sesión

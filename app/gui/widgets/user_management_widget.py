@@ -12,25 +12,29 @@ class UserManagementWidget(tk.Frame):
         self.load_users()
 
     def create_widgets(self):
-        self.user_listbox = tk.Listbox(self)
+        # Frame para la gestión de usuarios
+        user_frame = ttk.LabelFrame(self, text="Gestión de Usuarios")
+        user_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        self.user_listbox = tk.Listbox(user_frame)
         self.user_listbox.pack(fill=tk.BOTH, expand=True)
         self.user_listbox.bind('<<ListboxSelect>>', self.on_user_select)
 
-        self.name_entry = tk.Entry(self)
+        self.name_entry = tk.Entry(user_frame)
         self.name_entry.pack()
 
         # Cambiar el Entry de user por un Label para visualización
-        self.user_label = tk.Label(self, text="Usuario: ")
+        self.user_label = tk.Label(user_frame, text="Usuario: ")
         self.user_label.pack()
 
         self.tipo_usuario_options = ['Trabajador', 'Administrador', 'Junta']
-        self.type_combobox = ttk.Combobox(self, values=self.tipo_usuario_options, state="readonly")
+        self.type_combobox = ttk.Combobox(user_frame, values=self.tipo_usuario_options, state="readonly")
         self.type_combobox.pack()
 
-        self.create_button = tk.Button(self, text="Crear/Actualizar Usuario", command=self.create_or_update_user)
+        self.create_button = tk.Button(user_frame, text="Crear/Actualizar Usuario", command=self.create_or_update_user)
         self.create_button.pack()
 
-        self.delete_button = tk.Button(self, text="Eliminar Usuario", command=self.delete_user)
+        self.delete_button = tk.Button(user_frame, text="Eliminar Usuario", command=self.delete_user)
         self.delete_button.pack()
 
     def load_users(self):
