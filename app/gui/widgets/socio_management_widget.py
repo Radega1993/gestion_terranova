@@ -316,11 +316,11 @@ class SocioManagementWidget(tk.Frame):
             messagebox.showwarning("Advertencia", "Por favor, seleccione un socio para desactivar")
             return
             
-        confirmacion = messagebox.askyesno("Desactivar Socio", "¿Estás seguro de que quieres desactivar este socio?")
-        if confirmacion:
-            desactivar_socio(self.selected_socio.id)
-            self.listar_socios()
-
+            confirmacion = messagebox.askyesno("Desactivar Socio", "¿Estás seguro de que quieres desactivar este socio?")
+            if confirmacion:
+                desactivar_socio(self.selected_socio.id)
+                self.listar_socios()
+    
     def activar_socio_seleccionado(self):
         if not self.selected_socio:
             messagebox.showwarning("Advertencia", "Por favor, seleccione un socio para activar")

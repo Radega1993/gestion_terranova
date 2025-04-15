@@ -162,7 +162,7 @@ class BarCobrosWidget(tk.Frame):
                 # Actualizar el texto del label con la información del socio, sus deudas y el total adeudado
                 info_text = f"Socio: {socio.nombre}\nCorreo: {socio.email}\n{deudas_info}"
                 self.label_info_socio.config(text=info_text)
-                    
+                        
                 # Cargar las deudas pendientes
                 self.cargar_deudas_pendientes(socio_id)
                 
@@ -251,12 +251,12 @@ class BarCobrosWidget(tk.Frame):
             productos = session.query(Producto).filter_by(activo=True).all()
             for producto in productos:
                 if producto.stock_actual > 0:
-                    self.lista_productos_stock.insert("", "end", values=(
-                        producto.id,
-                        producto.nombre,
-                        f"{producto.precio:.2f}€",
-                        producto.stock_actual
-                    ))
+                        self.lista_productos_stock.insert("", "end", values=(
+                            producto.id,
+                            producto.nombre,
+                            f"{producto.precio:.2f}€",
+                            producto.stock_actual
+                        ))
         except Exception as e:
             print(f"Error al cargar productos: {str(e)}")
             messagebox.showerror("Error", f"Error al cargar productos: {str(e)}")
@@ -331,12 +331,12 @@ class BarCobrosWidget(tk.Frame):
         # Eliminar el producto de la lista de productos consumidos
         for i, (prod_id, cant) in enumerate(self.productos_consumidos):
             if cant == cantidad:
-                del self.productos_consumidos[i]
-                break
-        
+                    del self.productos_consumidos[i]
+                    break
+            
         # Eliminar el producto de la lista visual
-        self.lista_productos_consumidos.delete(seleccion[0])
-        
+            self.lista_productos_consumidos.delete(seleccion[0])
+
         # Actualizar el total
         self.total_consumicion -= precio_total
         self.label_precio_total.config(text=f"Precio total: {self.total_consumicion:.2f}€")

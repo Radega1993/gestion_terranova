@@ -15,6 +15,7 @@ from app.gui.widgets.product_management_widget import ProductManagementWidget
 from app.gui.widgets.socio_management_widget import SocioManagementWidget
 from app.gui.widgets.bar_cobros_widget import BarCobrosWidget
 from app.gui.widgets.reservas_widget import ReservasWidget
+from app.database.database import DATABASE_PATH
 
 class MainWindow(tk.Tk):
     def __init__(self):
@@ -64,8 +65,8 @@ class MainWindow(tk.Tk):
         # Pestaña de gestión de Socios
         self.socio_manager_tab = tk.Frame(self.tab_control)
         self.tab_control.add(self.socio_manager_tab, text="Gestión de Socios")
-        self.user_management_widget = SocioManagementWidget(self.socio_manager_tab)
-        self.user_management_widget.pack(expand=True, fill='both')
+        self.socio_management_widget = SocioManagementWidget(self.socio_manager_tab)
+        self.socio_management_widget.pack(expand=True, fill='both')
 
         # Pestaña de cobros en el bar
         self.bar_cobros_tab = tk.Frame(self.tab_control)
@@ -85,7 +86,7 @@ class MainWindow(tk.Tk):
         self.product_management_widget = ProductManagementWidget(self.product_management_tab)
         self.product_management_widget.pack(expand=True, fill='both')
         
-        # Pestaña de gestión de reseras
+        # Pestaña de gestión de reservas
         self.reservas_management_tab = tk.Frame(self.tab_control)
         self.tab_control.add(self.reservas_management_tab, text="Gestión de Reservas")
         self.reservas_management_widget = ReservasWidget(self.reservas_management_tab)
@@ -97,22 +98,13 @@ class MainWindow(tk.Tk):
         self.servicios_management_widget = ServicioManagementWidget(self.servicios_management_tab)
         self.servicios_management_widget.pack(expand=True, fill='both')
         
-        # Pestaña de gestión de servicios
+        # Pestaña de recaudaciones
         self.recaudaciones_management_tab = tk.Frame(self.tab_control)
         self.tab_control.add(self.recaudaciones_management_tab, text="Recaudaciones")
         self.recaudaciones_management_widget = RecaudacionesManagementWidget(self.recaudaciones_management_tab)
         self.recaudaciones_management_widget.pack(expand=True, fill='both')
 
         self.tab_control.bind("<<NotebookTabChanged>>", self.on_tab_change)
-        self.tab_control.add(self.user_management_tab, text="Gestión de Clientes")
-        self.tab_control.add(self.socio_manager_tab, text="Gestión de Socios")
-        self.tab_control.add(self.bar_cobros_tab, text="Bar")
-        self.tab_control.add(self.deber_tab, text="Deber")
-        self.tab_control.add(self.product_management_tab, text="Gestión de Productos")
-        self.tab_control.add(self.reservas_management_tab, text="Gestión de Reservas")
-        self.tab_control.add(self.servicios_management_tab, text="Gestión de Servicios")
-        self.tab_control.add(self.recaudaciones_management_tab, text="Recaudaciones")
-
 
     def create_logout_option(self):
         # Agregar una pestaña para ajustes y cerrar sesión
@@ -222,12 +214,12 @@ class MainWindow(tk.Tk):
         # Gestión de Reservas
         elif tab_frame == self.reservas_management_tab:
             self.reservas_management_widget = self.construir_widget_en_tab(tab_frame, ReservasWidget)
-            # Gestión de Reservas
+        # Gestión de Servicios
         elif tab_frame == self.servicios_management_tab:
             self.servicios_management_widget = self.construir_widget_en_tab(tab_frame, ServicioManagementWidget)
-            # Gestión de Reservas
-        elif tab_frame == self.reservas_management_tab:
-            self.reservas_management_widget = self.construir_widget_en_tab(tab_frame, RecaudacionesManagementWidget)
+        # Gestión de Recaudaciones
+        elif tab_frame == self.recaudaciones_management_tab:
+            self.recaudaciones_management_widget = self.construir_widget_en_tab(tab_frame, RecaudacionesManagementWidget)
 
 if __name__ == "__main__":
     app = MainWindow()
