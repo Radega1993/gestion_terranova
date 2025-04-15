@@ -1,8 +1,33 @@
 # -*- mode: python ; coding: utf-8 -*-
 import os
+import sys
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
 # Get the base directory
 base_dir = os.getcwd()
+
+# Create a runtime hook to fix Babel imports
+with open('runtime-hook.py', 'w') as f:
+    f.write('''
+import os
+import sys
+
+# Add the application directory to the path
+if getattr(sys, 'frozen', False):
+    # Running in a bundle
+    bundle_dir = os.path.dirname(sys.executable)
+    app_dir = os.path.join(bundle_dir, 'app')
+    if app_dir not in sys.path:
+        sys.path.insert(0, app_dir)
+    
+    # Fix Babel imports
+    babel_dir = os.path.join(bundle_dir, 'babel')
+    if os.path.exists(babel_dir) and babel_dir not in sys.path:
+        sys.path.insert(0, babel_dir)
+''')
+
+# Collect Babel data files
+babel_datas = collect_data_files('babel')
 
 a = Analysis(
     ['app/main.py'],
@@ -10,7 +35,7 @@ a = Analysis(
     binaries=[],
     datas=[
         ('gestion_terranova.db', 'app/database'),
-    ],
+    ] + babel_datas,
     hiddenimports=[
         'babel.numbers',
         'babel.dates',
@@ -21,6 +46,11 @@ a = Analysis(
         'babel.util',
         'babel.dates',
         'babel.numbers',
+        'babel.numbers.format',
+        'babel.numbers.parse',
+        'babel.numbers.plural',
+        'babel.numbers.symbols',
+        'babel.numbers.validators',
         'babel.plural',
         'babel.messages',
         'babel.calendar',
@@ -43,7 +73,7 @@ a = Analysis(
     ],
     hookspath=['.'],  # Add current directory to hook path
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=['runtime-hook.py'],
     excludes=[],
     noarchive=False,
 )
