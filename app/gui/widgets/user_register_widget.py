@@ -17,8 +17,8 @@ class RegistrationForm(tk.Toplevel):
         self.entry_nombre = tk.Entry(self)
         self.entry_nombre.pack()
 
-        # Correo Electrónico
-        self.lbl_email = tk.Label(self, text="Correo electrónico:")
+        # Usuario
+        self.lbl_email = tk.Label(self, text="Usuario:")
         self.lbl_email.pack(pady=(10, 0))
         self.entry_email = tk.Entry(self)
         self.entry_email.pack()
