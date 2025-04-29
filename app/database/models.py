@@ -34,18 +34,25 @@ class Venta(Base):
 
 class Usuario(Base):
     __tablename__ = 'usuarios'
+    
+    # Tipos de usuario permitidos
+    TIPOS_USUARIO = ['Trabajador', 'Administrador', 'Junta']
+    
     id = Column(Integer, primary_key=True)
     nombre = Column(String, nullable=False)
     user = Column(String, unique=True, nullable=False)
     tipo_usuario = Column(String, nullable=False)
     contrasena_hash = Column(String, nullable=False)
-    activo = Column(Boolean, default=True) 
+    activo = Column(Boolean, default=True)
+    validado = Column(Boolean, default=False)  # Nuevo campo para validación
     
     # Relaciones
     deudas_procesadas = relationship("Deuda", back_populates="trabajador")
     
-    def set_password(self, password):
+    def set_password(self, password, validado=None):
         self.contrasena_hash = generate_password_hash(password)
+        if validado is not None:
+            self.validado = validado
 
 class Socio(Base):
     __tablename__ = 'socios'

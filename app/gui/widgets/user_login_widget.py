@@ -95,10 +95,13 @@ class UserLoginWidget(tk.Frame):
         with Session() as session:
             usuario = session.query(Usuario).filter_by(user=user).first()
             if usuario and check_password_hash(usuario.contrasena_hash, password):
+                if not usuario.validado:
+                    messagebox.showerror("Error", "Tu cuenta aún no ha sido validada por un administrador.")
+                    return
                 EstadoApp.set_usuario_logueado_id(usuario.id)
                 self.login_success_callback(usuario)
             else:
-                messagebox.showerror("Error", "Inicio de sesión fallido. Verifica tu correo electrónico y contraseña.")
+                messagebox.showerror("Error", "Inicio de sesión fallido. Verifica tu usuario y contraseña.")
 
 
     def register(self):

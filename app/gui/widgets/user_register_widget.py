@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import messagebox
-from app.logic.users import crear_usuario  # Asegúrate de tener esta función implementada correctamente
+from app.logic.users import crear_usuario
+from app.database.models import Usuario
 
 class RegistrationForm(tk.Toplevel):
     def __init__(self):
@@ -39,8 +40,8 @@ class RegistrationForm(tk.Toplevel):
 
         if nombre and email and password:
             try:
-                crear_usuario(nombre, email, "Trabajador", password)
-                messagebox.showinfo("Registro", "Usuario registrado con éxito. Por favor, inicia sesión.")
+                crear_usuario(nombre, email, Usuario.TIPOS_USUARIO[0], password, validado=False)
+                messagebox.showinfo("Registro", "Usuario registrado con éxito. Por favor, espera a que un administrador valide tu cuenta.")
                 self.destroy()  # Cierra la ventana de registro tras el éxito
             except Exception as e:
                 messagebox.showerror("Registro", str(e))

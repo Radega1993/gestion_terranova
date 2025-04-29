@@ -12,10 +12,10 @@ def init_db():
             admin = Usuario(
                 nombre='Administrador',
                 user='admin',
-                tipo_usuario='administrador',
+                tipo_usuario='Administrador',
                 activo=True
             )
-            admin.set_password('admin')  # Contraseña por defecto
+            admin.set_password('admin', validado=True)  # El admin está validado por defecto
             session.add(admin)
             session.commit()
             print("Usuario administrador creado con éxito")

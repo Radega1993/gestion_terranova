@@ -93,12 +93,13 @@ class MainWindow(tk.Tk):
     def add_rest_of_the_tabs(self):
         logger.info("Añadiendo pestañas a la aplicación")
         try:
-            # Pestaña de gestión de usuarios
-            logger.debug("Creando pestaña de gestión de usuarios")
-            self.user_management_tab = tk.Frame(self.tab_control)
-            self.tab_control.add(self.user_management_tab, text="Gestión de Clientes")
-            self.user_management_widget = UserManagementWidget(self.user_management_tab)
-            self.user_management_widget.pack(expand=True, fill='both')
+            # Pestaña de gestión de usuarios (solo para administradores y junta)
+            if self.current_user.tipo_usuario in ['Administrador', 'Junta']:
+                logger.debug("Creando pestaña de gestión de usuarios")
+                self.user_management_tab = tk.Frame(self.tab_control)
+                self.tab_control.add(self.user_management_tab, text="Gestión de Clientes")
+                self.user_management_widget = UserManagementWidget(self.user_management_tab)
+                self.user_management_widget.pack(expand=True, fill='both')
 
             # Pestaña de gestión de Socios
             logger.debug("Creando pestaña de gestión de socios")
@@ -264,9 +265,18 @@ class MainWindow(tk.Tk):
     
     def logout(self):
         logger.info("Cerrando sesión")
-        # Manejar el cierre de sesión
-        self.tab_control.pack_forget()
+        # Destruir todas las pestañas existentes
+        for tab in self.tab_control.winfo_children():
+            tab.destroy()
+        # Destruir el control de pestañas
+        self.tab_control.destroy()
+        # Crear un nuevo control de pestañas
+        self.tab_control = ttk.Notebook(self)
+        self.tab_control.pack(expand=1, fill="both")
+        self.tab_control.pack_forget()  # Ocultar hasta el login exitoso
+        # Resetear el usuario actual
         self.current_user = None
+        # Crear el widget de login
         self.create_login_widget()
         logger.info("Sesión cerrada correctamente")
     
@@ -290,8 +300,8 @@ class MainWindow(tk.Tk):
         logger.debug(f"Cambiando a pestaña: {self.tab_control.tab(selected_tab, 'text')}")
 
         try:
-            # Gestion de Usuarios
-            if tab_frame == self.user_management_tab:
+            # Gestion de Usuarios (solo si existe la pestaña)
+            if hasattr(self, 'user_management_tab') and tab_frame == self.user_management_tab:
                 self.user_management_widget = self.construir_widget_en_tab(tab_frame, UserManagementWidget)
             # Gestion de Socios
             elif tab_frame == self.socio_manager_tab:
