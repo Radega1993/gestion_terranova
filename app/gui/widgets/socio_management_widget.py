@@ -1,399 +1,273 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from app.gui.widgets.socio_dialog import abrir_dialogo_socio
+from app.gui.widgets.socio_tree import SocioTree
 from app.logic.socios import (actualizar_socio, crear_socio, desactivar_socio, 
                             activar_socio, obtener_socio_por_id, obtener_socios,
                             obtener_socios_principales, obtener_miembros_familia)
 from app.logic.photo_handler import get_photo_path
 from PIL import Image, ImageTk
 import os
+from app.database.connection import Session
+from app.database.models import Socio, Usuario
+from app.logic.EstadoApp import EstadoApp
 
 class SocioManagementWidget(tk.Frame):
     def __init__(self, parent):
         super().__init__(parent, bg="#f0f0f0")
-        self.create_widgets()
-        self.listar_socios()
-        self.selected_socio = None
+        self.setup_ui()
 
-    def create_widgets(self):
-        # Frame principal con dos paneles
-        self.paned_window = ttk.PanedWindow(self, orient=tk.HORIZONTAL)
-        self.paned_window.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # Panel izquierdo para la lista de socios
-        left_frame = ttk.Frame(self.paned_window)
-        self.paned_window.add(left_frame, weight=1)
-        
-        # Panel derecho para detalles
-        right_frame = ttk.Frame(self.paned_window)
-        self.paned_window.add(right_frame, weight=2)
-        
-        # Botones en el panel izquierdo
-        self.frame_botones = ttk.Frame(left_frame)
-        self.frame_botones.pack(fill=tk.X, padx=5, pady=5)
+    def setup_ui(self):
+        # Crear el frame principal
+        main_frame = ttk.Frame(self)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        self.btn_recargar = ttk.Button(self.frame_botones, text="Recargar", command=self.listar_socios)
-        self.btn_recargar.pack(side=tk.LEFT, padx=2)
+        # Crear el SocioTree
+        with Session() as session:
+            tipo_usuario = session.query(Usuario).get(EstadoApp.get_usuario_logueado_id()).tipo_usuario
+            self.socio_tree = SocioTree(main_frame, session, tipo_usuario)
+            self.socio_tree.pack(fill=tk.BOTH, expand=True)
 
-        self.btn_añadir_socio = ttk.Button(self.frame_botones, text="Añadir Socio", command=self.añadir_socio)        
-        self.btn_añadir_socio.pack(side=tk.LEFT, padx=2)
+        # Frame inferior para detalles
+        self.details_frame = ttk.LabelFrame(main_frame, text="Detalles del Socio")
+        self.details_frame.pack(fill=tk.X, pady=(10, 0))
 
-        self.btn_modificar_socio = ttk.Button(self.frame_botones, text="Modificar", command=self.modificar_socio_seleccionado)
-        self.btn_modificar_socio.pack(side=tk.LEFT, padx=2)
+        # Inicializar variables para detalles
+        self.detalles_vars = {
+            "codigo": tk.StringVar(),
+            "nombre": tk.StringVar(),
+            "apellidos": tk.StringVar(),
+            "dni": tk.StringVar(),
+            "telefono": tk.StringVar(),
+            "email": tk.StringVar(),
+            "direccion": tk.StringVar(),
+            "poblacion": tk.StringVar(),
+            "codigo_postal": tk.StringVar(),
+            "provincia": tk.StringVar(),
+            "estado": tk.StringVar()
+        }
 
-        self.btn_desactivar_socio = ttk.Button(self.frame_botones, text="Desactivar", command=self.desactivar_socio_seleccionado)
-        self.btn_desactivar_socio.pack(side=tk.LEFT, padx=2)
+        # Crear grid de detalles
+        row = 0
+        col = 0
+        for key, var in self.detalles_vars.items():
+            ttk.Label(self.details_frame, text=key.title() + ":").grid(row=row, column=col*2, padx=5, pady=2, sticky=tk.E)
+            ttk.Label(self.details_frame, textvariable=var).grid(row=row, column=col*2+1, padx=5, pady=2, sticky=tk.W)
+            col += 1
+            if col > 2:
+                col = 0
+                row += 1
 
-        self.btn_activar_socio = ttk.Button(self.frame_botones, text="Activar", command=self.activar_socio_seleccionado)
-        self.btn_activar_socio.pack(side=tk.LEFT, padx=2)
+        # Bind para selección en el nuevo árbol
+        self.socio_tree.tree.bind("<<TreeviewSelect>>", self.on_select)
 
-        # Treeview para socios principales
-        self.lista_socios = ttk.Treeview(left_frame, columns=(
-            "ID", "Código", "Nombre", "DNI", "Activo"
-        ), show="tree headings", selectmode="browse")
-        
-        # Configurar las columnas
-        self.lista_socios.heading("ID", text="ID")
-        self.lista_socios.heading("Código", text="Código")
-        self.lista_socios.heading("Nombre", text="Nombre")
-        self.lista_socios.heading("DNI", text="DNI")
-        self.lista_socios.heading("Activo", text="Activo")
-        
-        # Ajustar el ancho de las columnas
-        self.lista_socios.column("ID", width=50)
-        self.lista_socios.column("Código", width=80)
-        self.lista_socios.column("Nombre", width=200)
-        self.lista_socios.column("DNI", width=100)
-        self.lista_socios.column("Activo", width=70)
-        
-        self.lista_socios.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # Bind para selección
-        self.lista_socios.bind('<<TreeviewSelect>>', self.on_socio_select)
-        
-        # Panel derecho para detalles
-        self.detalles_frame = ttk.LabelFrame(right_frame, text="Detalles del Socio")
-        self.detalles_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        
-        # Frame para la foto
-        self.foto_frame = ttk.Frame(self.detalles_frame)
-        self.foto_frame.pack(fill=tk.X, padx=10, pady=10)
-        
-        self.foto_label = ttk.Label(self.foto_frame)
-        self.foto_label.pack()
-        
-        # Frame para información
-        self.info_frame = ttk.Frame(self.detalles_frame)
-        self.info_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-        
-        # Labels para información básica
-        self.rgpd_label = ttk.Label(self.info_frame, text="RGPD: ")
-        self.rgpd_label.pack(anchor=tk.W)
-        
-        self.codigo_label = ttk.Label(self.info_frame, text="Código: ")
-        self.codigo_label.pack(anchor=tk.W)
-        
-        self.dni_label = ttk.Label(self.info_frame, text="DNI: ")
-        self.dni_label.pack(anchor=tk.W)
-        
-        self.nombre_completo_label = ttk.Label(self.info_frame, text="Nombre Completo: ")
-        self.nombre_completo_label.pack(anchor=tk.W)
-        
-        self.fecha_nacimiento_label = ttk.Label(self.info_frame, text="Fecha Nacimiento: ")
-        self.fecha_nacimiento_label.pack(anchor=tk.W)
-        
-        self.cuota_label = ttk.Label(self.info_frame, text="Cuota: ")
-        self.cuota_label.pack(anchor=tk.W)
-        
-        # Labels para información de contacto
-        self.direccion_label = ttk.Label(self.info_frame, text="Dirección: ")
-        self.direccion_label.pack(anchor=tk.W)
-        
-        self.poblacion_label = ttk.Label(self.info_frame, text="Población: ")
-        self.poblacion_label.pack(anchor=tk.W)
-        
-        self.telefonos_label = ttk.Label(self.info_frame, text="Teléfonos: ")
-        self.telefonos_label.pack(anchor=tk.W)
-        
-        self.emails_label = ttk.Label(self.info_frame, text="Emails: ")
-        self.emails_label.pack(anchor=tk.W)
-        
-        # Labels para información bancaria
-        self.cuenta_label = ttk.Label(self.info_frame, text="Cuenta Bancaria: ")
-        self.cuenta_label.pack(anchor=tk.W)
-        
-        # Labels para información familiar
-        self.tipo_label = ttk.Label(self.info_frame, text="Tipo: ")
-        self.tipo_label.pack(anchor=tk.W)
-        
-        self.num_pers_label = ttk.Label(self.info_frame, text="Número de Personas: ")
-        self.num_pers_label.pack(anchor=tk.W)
-        
-        self.adheridos_label = ttk.Label(self.info_frame, text="Adheridos: ")
-        self.adheridos_label.pack(anchor=tk.W)
-        
-        self.menores_label = ttk.Label(self.info_frame, text="Menores de 3 años: ")
-        self.menores_label.pack(anchor=tk.W)
-        
-        self.estado_label = ttk.Label(self.info_frame, text="Estado: ")
-        self.estado_label.pack(anchor=tk.W)
-        
-        # Frame para miembros de familia (si es socio principal)
-        self.miembros_frame = ttk.LabelFrame(self.detalles_frame, text="Miembros de la Familia")
-        self.miembros_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-        
-        self.miembros_tree = ttk.Treeview(self.miembros_frame, columns=(
-            "ID", "Código", "Nombre", "DNI", "Activo"
-        ), show="headings", selectmode="browse")
-        
-        self.miembros_tree.heading("ID", text="ID")
-        self.miembros_tree.heading("Código", text="Código")
-        self.miembros_tree.heading("Nombre", text="Nombre")
-        self.miembros_tree.heading("DNI", text="DNI")
-        self.miembros_tree.heading("Activo", text="Activo")
-        
-        self.miembros_tree.column("ID", width=50)
-        self.miembros_tree.column("Código", width=80)
-        self.miembros_tree.column("Nombre", width=200)
-        self.miembros_tree.column("DNI", width=100)
-        self.miembros_tree.column("Activo", width=70)
-        
-        self.miembros_tree.pack(fill=tk.BOTH, expand=True)
-
-    def listar_socios(self):
-        # Limpiar el árbol
-        for item in self.lista_socios.get_children():
-            self.lista_socios.delete(item)
-            
-        # Obtener socios principales
-        socios_principales = obtener_socios_principales()
-        
-        
-        # Insertar socios principales
-        for socio in socios_principales:
-            
-            # Insertar socio principal
-            principal_id = self.lista_socios.insert("", tk.END, values=(
-                socio.id,
-                socio.codigo_socio,
-                f"{socio.nombre} {socio.primer_apellido} {socio.segundo_apellido}".strip(),
-                socio.dni,
-                "Sí" if socio.activo else "No"
-            ), tags=('principal',))
-            
-            # Obtener y insertar miembros de la familia
-            miembros = obtener_miembros_familia(socio.id)
-            for miembro in miembros:
-                self.lista_socios.insert(principal_id, tk.END, values=(
-                    miembro.id,
-                    miembro.codigo_socio,
-                    f"{miembro.nombre} {miembro.primer_apellido} {miembro.segundo_apellido}".strip(),
-                    miembro.dni,
-                    "Sí" if miembro.activo else "No"
-                ), tags=('miembro',))
-        
-        # Configurar estilos para diferenciar principales y miembros
-        self.lista_socios.tag_configure('principal', font=('TkDefaultFont', 10, 'bold'))
-        self.lista_socios.tag_configure('miembro', font=('TkDefaultFont', 9))
-        
-        # Expandir todos los elementos para mostrar la jerarquía completa
-        for item in self.lista_socios.get_children():
-            self.lista_socios.item(item, open=True)
-
-    def on_socio_select(self, event):
-        # Obtener el item seleccionado
-        selected_items = self.lista_socios.selection()
-        if not selected_items:
+    def on_select(self, event):
+        """Maneja la selección de un socio en el Treeview"""
+        selection = self.socio_tree.tree.selection()
+        if not selection:
             return
         
-        item_id = selected_items[0]
-        socio_id = self.lista_socios.item(item_id)['values'][0]
-        
-        # Obtener el socio seleccionado
-        self.selected_socio = obtener_socio_por_id(socio_id)
-        if not self.selected_socio:
-            return
-        
-        # Actualizar la foto
-        self.actualizar_foto()
-        
-        # Actualizar información básica
-        self.rgpd_label.config(text=f"RGPD: {'Sí' if self.selected_socio.rgpd else 'No'}")
-        self.codigo_label.config(text=f"Código: {self.selected_socio.codigo_socio}")
-        self.dni_label.config(text=f"DNI: {self.selected_socio.dni}")
-        self.nombre_completo_label.config(text=f"Nombre Completo: {self.selected_socio.nombre} {self.selected_socio.primer_apellido} {self.selected_socio.segundo_apellido}")
-        self.fecha_nacimiento_label.config(text=f"Fecha Nacimiento: {self.selected_socio.fecha_nacimiento}")
-        self.cuota_label.config(text=f"Cuota: {self.selected_socio.cuota}€")
-        
-        # Actualizar información de contacto
-        self.direccion_label.config(text=f"Dirección: {self.selected_socio.direccion}")
-        self.poblacion_label.config(text=f"Población: {self.selected_socio.poblacion} ({self.selected_socio.codigo_postal})")
-        self.telefonos_label.config(text=f"Teléfonos: {self.selected_socio.telefono} / {self.selected_socio.telefono2}")
-        self.emails_label.config(text=f"Emails: {self.selected_socio.email} / {self.selected_socio.email2}")
-        
-        # Actualizar información bancaria
-        cuenta = f"{self.selected_socio.iban}-{self.selected_socio.entidad}-{self.selected_socio.oficina}-{self.selected_socio.dc}-{self.selected_socio.cuenta_corriente}"
-        self.cuenta_label.config(text=f"Cuenta Bancaria: {cuenta}")
-        
-        # Actualizar información familiar
-        tipo = "Principal" if self.selected_socio.es_principal else "Miembro"
-        self.tipo_label.config(text=f"Tipo: {tipo}")
-        self.num_pers_label.config(text=f"Número de Personas: {self.selected_socio.num_pers}")
-        self.adheridos_label.config(text=f"Adheridos: {self.selected_socio.adherits}")
-        self.menores_label.config(text=f"Menores de 3 años: {self.selected_socio.menor_3_anys}")
-        self.estado_label.config(text=f"Estado: {'Activo' if self.selected_socio.activo else 'Inactivo'}")
-        
-        # Actualizar lista de miembros si es socio principal
-        self.actualizar_lista_miembros()
+        # Obtener el ID del socio seleccionado
+        socio_id = int(self.socio_tree.tree.item(selection[0], "tags")[0])
 
-    def actualizar_foto(self):
-        if not self.selected_socio:
-            return
-        
-        # Limpiar foto actual
-        self.foto_label.config(image='')
-        
-        # Si el socio tiene foto, mostrarla
-        if self.selected_socio.foto_path:
-            try:
-                photo_path = get_photo_path(self.selected_socio.foto_path)
-                if os.path.exists(photo_path):
-                    # Cargar y redimensionar la imagen
-                    image = Image.open(photo_path)
-                    image.thumbnail((200, 200))  # Redimensionar manteniendo proporción
-                    photo = ImageTk.PhotoImage(image)
-                    
-                    # Mostrar la imagen
-                    self.foto_label.config(image=photo)
-                    self.foto_label.image = photo  # Mantener referencia
-            except Exception as e:
-                print(f"Error al cargar la foto: {e}")
-
-    def actualizar_lista_miembros(self):
-        # Limpiar la lista de miembros
-        for item in self.miembros_tree.get_children():
-            self.miembros_tree.delete(item)
-        
-        if not self.selected_socio or not self.selected_socio.es_principal:
-            self.miembros_frame.pack_forget()
-            return
-        
-        # Mostrar el frame de miembros
-        self.miembros_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-        
-        # Obtener y mostrar los miembros
-        miembros = obtener_miembros_familia(self.selected_socio.id)
-        for miembro in miembros:
-            self.miembros_tree.insert("", tk.END, values=(
-                miembro.id,
-                miembro.codigo_socio,
-                f"{miembro.nombre} {miembro.primer_apellido} {miembro.segundo_apellido}".strip(),
-                miembro.dni,
-                "Sí" if miembro.activo else "No"
-            ))
+        # Cargar detalles del socio
+        with Session() as session:
+            socio = session.query(Socio).get(socio_id)
+            if socio:
+                # Actualizar variables de detalles
+                self.detalles_vars["codigo"].set(socio.codigo_socio)
+                self.detalles_vars["nombre"].set(socio.nombre)
+                self.detalles_vars["apellidos"].set(
+                    f"{socio.primer_apellido} {socio.segundo_apellido or ''}"
+                )
+                self.detalles_vars["dni"].set(socio.dni or "")
+                self.detalles_vars["telefono"].set(socio.telefono or "")
+                self.detalles_vars["email"].set(socio.email or "")
+                self.detalles_vars["direccion"].set(socio.direccion or "")
+                self.detalles_vars["poblacion"].set(socio.poblacion or "")
+                self.detalles_vars["codigo_postal"].set(socio.codigo_postal or "")
+                self.detalles_vars["provincia"].set(socio.provincia or "")
+                self.detalles_vars["estado"].set(
+                    "Activo" if socio.activo else "Inactivo"
+                )
 
     def añadir_socio(self):
         socios_principales = obtener_socios_principales()
         datos = abrir_dialogo_socio(self, socios_principales=socios_principales)
         if datos:
             crear_socio(**datos)
-            self.listar_socios()
+            self.socio_tree.actualizar_arbol()
 
     def modificar_socio_seleccionado(self):
-        if not self.selected_socio:
+        selection = self.socio_tree.tree.selection()
+        if not selection:
             messagebox.showwarning("Advertencia", "Por favor, seleccione un socio para modificar")
             return
             
-        socios_principales = obtener_socios_principales()
-        datos = abrir_dialogo_socio(self, self.selected_socio, socios_principales)
-        if datos:
-            actualizar_socio(self.selected_socio.id, **datos)
-            self.listar_socios()
-            self.mostrar_detalles_socio(obtener_socio_por_id(self.selected_socio.id))
+        socio_id = int(self.socio_tree.tree.item(selection[0], "tags")[0])
+        with Session() as session:
+            socio = session.query(Socio).get(socio_id)
+            if socio:
+                socios_principales = obtener_socios_principales()
+                socio_actualizado = abrir_dialogo_socio(self, socio, socios_principales)
+                if socio_actualizado:
+                    # Convertir el objeto Socio a un diccionario con sus atributos
+                    datos_socio = {
+                        'nombre': socio_actualizado.nombre,
+                        'primer_apellido': socio_actualizado.primer_apellido,
+                        'segundo_apellido': socio_actualizado.segundo_apellido,
+                        'dni': socio_actualizado.dni,
+                        'fecha_nacimiento': socio_actualizado.fecha_nacimiento,
+                        'telefono': socio_actualizado.telefono,
+                        'email': socio_actualizado.email,
+                        'es_principal': socio_actualizado.es_principal,
+                        'foto_path': socio_actualizado.foto_path,
+                        'direccion': socio_actualizado.direccion,
+                        'codigo_postal': socio_actualizado.codigo_postal,
+                        'poblacion': socio_actualizado.poblacion,
+                        'provincia': socio_actualizado.provincia,
+                        'telefono2': socio_actualizado.telefono2,
+                        'email2': socio_actualizado.email2,
+                        'num_pers': socio_actualizado.num_pers,
+                        'adherits': socio_actualizado.adherits,
+                        'menor_3_anys': socio_actualizado.menor_3_anys,
+                        'cuota': socio_actualizado.cuota,
+                        'iban': socio_actualizado.iban,
+                        'entidad': socio_actualizado.entidad,
+                        'oficina': socio_actualizado.oficina,
+                        'dc': socio_actualizado.dc,
+                        'cuenta_corriente': socio_actualizado.cuenta_corriente,
+                        'rgpd': socio_actualizado.rgpd,
+                        'socio_principal_id': socio_actualizado.socio_principal_id,
+                        'codigo_socio': socio_actualizado.codigo_socio
+                    }
+                    actualizar_socio(socio_id, **datos_socio)
+                    self.socio_tree.actualizar_arbol()
+                    messagebox.showinfo("Éxito", "Socio actualizado correctamente")
 
     def desactivar_socio_seleccionado(self):
-        if not self.selected_socio:
+        selection = self.socio_tree.tree.selection()
+        if not selection:
             messagebox.showwarning("Advertencia", "Por favor, seleccione un socio para desactivar")
             return
             
-            confirmacion = messagebox.askyesno("Desactivar Socio", "¿Estás seguro de que quieres desactivar este socio?")
+        socio_id = int(self.socio_tree.tree.item(selection[0], "tags")[0])
+        with Session() as session:
+            socio = session.query(Socio).get(socio_id)
+            if socio:
+                confirmacion = messagebox.askyesno("Desactivar Socio", 
+                    "¿Estás seguro de que quieres desactivar este socio?\n\n" +
+                    "Si es un socio principal, también se desactivarán todos sus miembros de familia.")
             if confirmacion:
-                desactivar_socio(self.selected_socio.id)
-                self.listar_socios()
+                    if desactivar_socio(socio_id):
+                        messagebox.showinfo("Éxito", "Socio desactivado correctamente")
+                        self.socio_tree.actualizar_arbol()
     
     def activar_socio_seleccionado(self):
-        if not self.selected_socio:
+        selection = self.socio_tree.tree.selection()
+        if not selection:
             messagebox.showwarning("Advertencia", "Por favor, seleccione un socio para activar")
             return
             
-        confirmacion = messagebox.askyesno("Activar Socio", "¿Estás seguro de que quieres activar este socio?")
+        socio_id = int(self.socio_tree.tree.item(selection[0], "tags")[0])
+        with Session() as session:
+            socio = session.query(Socio).get(socio_id)
+            if socio:
+                confirmacion = messagebox.askyesno("Activar Socio", 
+                    "¿Estás seguro de que quieres activar este socio?")
         if confirmacion:
-            try:
-                activar_socio(self.selected_socio.id)
-                self.listar_socios()
-            except ValueError as e:
-                messagebox.showerror("Error", str(e))
+                    if activar_socio(socio_id):
+                        messagebox.showinfo("Éxito", "Socio activado correctamente")
+                        self.socio_tree.actualizar_arbol()
 
-    def mostrar_detalles_socio(self, socio):
-        # Actualizar información básica
-        self.rgpd_label.config(text=f"RGPD: {'Sí' if socio.rgpd else 'No'}")
-        self.codigo_label.config(text=f"Código: {socio.codigo_socio or ''}")
-        self.dni_label.config(text=f"DNI: {socio.dni or ''}")
-        
-        nombre_completo = f"{socio.nombre or ''} {socio.primer_apellido or ''} {socio.segundo_apellido or ''}".strip()
-        self.nombre_completo_label.config(text=f"Nombre Completo: {nombre_completo}")
-        
-        fecha_nacimiento = socio.fecha_nacimiento.strftime("%d/%m/%Y") if socio.fecha_nacimiento else ''
-        self.fecha_nacimiento_label.config(text=f"Fecha Nacimiento: {fecha_nacimiento}")
-        
-        self.cuota_label.config(text=f"Cuota: {socio.cuota or 0:.2f} €")
-        
-        # Actualizar información de contacto
-        direccion = f"{socio.direccion or ''}, {socio.codigo_postal or ''} {socio.poblacion or ''} ({socio.provincia or ''})".strip()
-        self.direccion_label.config(text=f"Dirección: {direccion}")
-        
-        telefonos = f"{socio.telefono or ''} / {socio.telefono2 or ''}".strip(" /")
-        self.telefonos_label.config(text=f"Teléfonos: {telefonos}")
-        
-        emails = f"{socio.email or ''} / {socio.email2 or ''}".strip(" /")
-        self.emails_label.config(text=f"Emails: {emails}")
-        
-        # Actualizar información bancaria
-        cuenta = f"IBAN: {socio.iban or ''} {socio.entidad or ''} {socio.oficina or ''} {socio.dc or ''} {socio.cuenta_corriente or ''}".strip()
-        self.cuenta_label.config(text=f"Cuenta Bancaria: {cuenta}")
-        
-        # Actualizar información familiar
-        self.tipo_label.config(text=f"Tipo: {'Principal' if socio.es_principal else 'Miembro'}")
-        self.num_pers_label.config(text=f"Número de Personas: {socio.num_pers or 0}")
-        self.adheridos_label.config(text=f"Adheridos: {socio.adherits or 0}")
-        self.menores_label.config(text=f"Menores de 3 años: {socio.menor_3_anys or 0}")
-        self.estado_label.config(text=f"Estado: {'Activo' if socio.activo else 'Inactivo'}")
-        
-        # Mostrar foto si existe
+    def mostrar_detalles_familia(self, event):
+        """Muestra los detalles de la familia al hacer doble clic en un socio principal"""
+        selection = self.socio_tree.tree.selection()
+        if not selection:
+            return
+
+        # Obtener el ID del socio seleccionado
+        socio_id = int(self.socio_tree.tree.item(selection[0], "tags")[0])
+
+        # Verificar si es un socio principal
+        with Session() as session:
+            socio = session.query(Socio).get(socio_id)
+            if not socio or not socio.es_principal:
+                return
+
+            # Crear ventana de detalles
+            detalles_window = tk.Toplevel(self)
+            detalles_window.title(f"Detalles de la Familia - {socio.nombre}")
+            detalles_window.geometry("800x600")
+            detalles_window.transient(self)
+
+            # Frame principal con scrollbar
+            scrollable_frame = ttk.Frame(detalles_window)
+            scrollable_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+
+            # Frame para el socio principal
+            principal_frame = ttk.LabelFrame(scrollable_frame, text="Socio Principal")
+            principal_frame.pack(fill=tk.X, pady=5, padx=5)
+
+            # Mostrar foto del socio principal si existe
         if socio.foto_path:
             try:
-                photo_path = get_photo_path(socio.foto_path)
-                if os.path.exists(photo_path):
-                    image = Image.open(photo_path)
-                    image.thumbnail((200, 200))
+                    image = Image.open(socio.foto_path)
+                    image = image.resize((150, 150), Image.Resampling.LANCZOS)
                     photo = ImageTk.PhotoImage(image)
-                    self.foto_label.configure(image=photo)
-                    self.foto_label.image = photo
-                else:
-                    self.foto_label.configure(image='')
+                    label = ttk.Label(principal_frame, image=photo)
+                    label.image = photo
+                    label.pack(pady=5)
             except Exception as e:
                 print(f"Error al cargar la imagen: {e}")
-                self.foto_label.configure(image='')
-        else:
-            self.foto_label.configure(image='')
-        
-        # Mostrar miembros de familia si es socio principal
-        if socio.es_principal:
-            self.miembros_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
-            self.actualizar_lista_miembros()
-        else:
-            self.miembros_frame.pack_forget()
 
-    def actualizar_datos(self):
-        """Actualiza la lista de socios mostrada al usuario."""
-        self.listar_socios()
+            # Mostrar información del socio principal
+            info_text = f"""
+            Nombre: {socio.nombre} {socio.primer_apellido} {socio.segundo_apellido or ''}
+            DNI: {socio.dni or 'No especificado'}
+            Teléfono: {socio.telefono or 'No especificado'}
+            Email: {socio.email or 'No especificado'}
+            Dirección: {socio.direccion or 'No especificada'}
+            """
+            ttk.Label(principal_frame, text=info_text, justify=tk.LEFT).pack(pady=5)
+
+            # Frame para los miembros de la familia
+            familia_frame = ttk.LabelFrame(scrollable_frame, text="Miembros de la Familia")
+            familia_frame.pack(fill=tk.X, pady=5, padx=5)
+
+            # Obtener miembros de la familia
+            miembros = session.query(Socio).filter(
+                Socio.socio_principal_id == socio.id
+            ).all()
+
+            if not miembros:
+                ttk.Label(familia_frame, text="No hay miembros familiares registrados", padding=10).pack()
+        else:
+                for miembro in miembros:
+                    miembro_frame = ttk.LabelFrame(familia_frame, text=f"Miembro: {miembro.codigo_socio}")
+                    miembro_frame.pack(fill=tk.X, padx=5, pady=5)
+
+                    # Frame para foto y datos del miembro
+                    datos_miembro_frame = ttk.Frame(miembro_frame)
+                    datos_miembro_frame.pack(fill=tk.X, padx=5, pady=5)
+
+                    # Mostrar foto del miembro si existe
+                    if miembro.foto_path:
+                        try:
+                            image = Image.open(miembro.foto_path)
+                            image = image.resize((100, 100), Image.Resampling.LANCZOS)
+                            photo = ImageTk.PhotoImage(image)
+                            label = ttk.Label(datos_miembro_frame, image=photo)
+                            label.image = photo
+                            label.pack(side=tk.LEFT, padx=5)
+                        except Exception as e:
+                            print(f"Error al cargar la imagen: {e}")
+
+                    # Mostrar información del miembro
+                    miembro_info = f"""
+                    Nombre: {miembro.nombre} {miembro.primer_apellido} {miembro.segundo_apellido or ''}
+                    DNI: {miembro.dni or 'No especificado'}
+                    Teléfono: {miembro.telefono or 'No especificado'}
+                    Email: {miembro.email or 'No especificado'}
+                    """
+                    ttk.Label(datos_miembro_frame, text=miembro_info, justify=tk.LEFT).pack(side=tk.LEFT, padx=5)

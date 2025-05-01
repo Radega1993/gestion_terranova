@@ -3,6 +3,57 @@ from app.database.connection import Session
 from app.database.models import Socio, MiembroFamilia
 from sqlalchemy import and_, or_
 
+def generar_codigo_socio(session, es_principal=True, socio_principal_id=None):
+    """
+    Genera un código de socio único en el formato AET001 para socios principales
+    o AET001_01 para miembros de familia.
+    
+    Args:
+        session: Sesión de base de datos
+        es_principal: Boolean indicando si es socio principal
+        socio_principal_id: ID del socio principal si es miembro de familia
+    
+    Returns:
+        String con el código de socio generado
+    """
+    if es_principal:
+        # Obtener el último código de socio principal
+        ultimo_socio = session.query(Socio).filter(
+            Socio.es_principal == True,
+            Socio.codigo_socio.like('AET%')
+        ).order_by(Socio.codigo_socio.desc()).first()
+        
+        if not ultimo_socio or not ultimo_socio.codigo_socio:
+            # Si no hay socios, empezar con AET001
+            nuevo_numero = 1
+        else:
+            # Extraer el número del último código y sumar 1
+            ultimo_numero = int(ultimo_socio.codigo_socio[3:])
+            nuevo_numero = ultimo_numero + 1
+        
+        return f"AET{nuevo_numero:03d}"
+    else:
+        # Para miembros de familia, obtener el código del socio principal
+        socio_principal = session.query(Socio).filter_by(id=socio_principal_id).first()
+        if not socio_principal:
+            raise ValueError("No se encontró el socio principal")
+        
+        # Obtener el último número de miembro para este socio principal
+        ultimo_miembro = session.query(Socio).filter(
+            Socio.socio_principal_id == socio_principal_id,
+            Socio.codigo_socio.like(f"{socio_principal.codigo_socio}_%")
+        ).order_by(Socio.codigo_socio.desc()).first()
+        
+        if not ultimo_miembro or not ultimo_miembro.codigo_socio:
+            # Si no hay miembros, empezar con _01
+            nuevo_numero = 1
+        else:
+            # Extraer el número del último código y sumar 1
+            ultimo_numero = int(ultimo_miembro.codigo_socio.split('_')[1])
+            nuevo_numero = ultimo_numero + 1
+        
+        return f"{socio_principal.codigo_socio}_{nuevo_numero:02d}"
+
 def crear_socio(
     nombre, primer_apellido, segundo_apellido, dni=None, codigo_socio=None,
     email=None, email2=None, direccion=None, poblacion=None, codigo_postal=None,
@@ -22,6 +73,10 @@ def crear_socio(
             
             if not socio_principal:
                 raise ValueError("El socio principal seleccionado no existe, no está activo o no es principal")
+
+        # Generar código de socio si no se proporciona
+        if not codigo_socio:
+            codigo_socio = generar_codigo_socio(session, es_principal, socio_principal_id)
 
         # Crear el socio
         socio = Socio(
@@ -107,25 +162,49 @@ def obtener_socio_por_id(socio_id):
 
 def desactivar_socio(socio_id):
     with Session() as session:
-        socio = session.query(Socio).filter_by(id=socio_id).one()
+        socio = session.query(Socio).filter_by(id=socio_id).one_or_none()
+        if not socio:
+            raise ValueError("El socio no existe")
+            
+        if not socio.activo:
+            raise ValueError("El socio ya está desactivado")
+            
         # Si es un socio principal, desactivar también a los miembros de su familia
         if socio.es_principal:
             miembros = session.query(Socio).filter_by(socio_principal_id=socio_id).all()
             for miembro in miembros:
                 miembro.activo = False
+                print(f"Desactivando miembro de familia: {miembro.nombre}")
+        else:
+            # Si es un miembro, verificar que no tenga deudas pendientes
+            from app.logic.deudas import verificar_deudas_socio
+            if verificar_deudas_socio(socio_id):
+                raise ValueError("No se puede desactivar un socio con deudas pendientes")
+                
         socio.activo = False
         session.commit()
+        return True
 
 def activar_socio(socio_id):
     with Session() as session:
-        socio = session.query(Socio).filter_by(id=socio_id).one()
+        socio = session.query(Socio).filter_by(id=socio_id).one_or_none()
+        if not socio:
+            raise ValueError("El socio no existe")
+            
+        if socio.activo:
+            raise ValueError("El socio ya está activo")
+            
         # Si es un miembro de familia, verificar que su socio principal esté activo
         if not socio.es_principal and socio.socio_principal_id:
-            socio_principal = session.query(Socio).filter_by(id=socio.socio_principal_id).one()
+            socio_principal = session.query(Socio).filter_by(id=socio.socio_principal_id).one_or_none()
+            if not socio_principal:
+                raise ValueError("El socio principal no existe")
             if not socio_principal.activo:
                 raise ValueError("No se puede activar un miembro de familia si su socio principal está inactivo")
+                
         socio.activo = True
         session.commit()
+        return True
 
 def actualizar_socio(
     socio_id,
